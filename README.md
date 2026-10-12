@@ -16,6 +16,7 @@ From v0.3.0 the plugin builds every file in `knowledge/` into its DLL, and `get_
 | [attributes-and-legends.md](knowledge/attributes-and-legends.md) | Attribute fields must exist on the layer; legends and line weight API |
 | [tunnels-by-rule.md](knowledge/tunnels-by-rule.md) | Refreshable solids from strings with Section Along Polyline Rules; sections per ACT_TYPE |
 | [decline-and-level-design.md](knowledge/decline-and-level-design.md) | Decline and level concept design: 1:7 stacked loops, standoffs, one ACC per group, take-offs, RAR clearance, checks and delivery; .dcf file format notes |
+| [block-model-interrogation.md](knowledge/block-model-interrogation.md) | Batch interrogating solids against a block model for grade and tonnes; API, gotchas, what to report |
 | [task-solids.md](knowledge/task-solids.md) | Task solid attributes and geometry notes, working style |
 
 ## Adding to it
