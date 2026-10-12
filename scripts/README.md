@@ -23,6 +23,9 @@ They were written for one drawing, so check the layer names at the top of each s
 | stope-design | export-blocks-around-drive-read-only.cs | Exports the block model sub-blocks in a box around a drive, plus its floor string, to CSV. |
 | stope-design | design_stopes.py | Python (numpy): shapes the walls (5 points up each wall, a section every 5 m) to take in the ≥ cut-off blocks, picks the chainages (max length, pillar, grade limit) and writes the solid geometry. |
 | stope-design | create-stopes-from-geometry.cs | Builds closed Polyface stopes from that geometry and tags them like LH_Stope task solids. |
+| stope-design | blocks_along_drive.py | Python (numpy): the same wall shaping over the whole drive, with drillability rules (convex sections, ≥55° walls, ≤1 m change per section), cut into 5 m blocks (one closed solid each) for the engineer to pick stopes and pillars. |
+| stope-design | create-blocks-from-geometry.cs | Builds the 5 m blocks on STOPE DESIGN\\5M BLOCKS with LH_Stope tags, BLOCK and chainages. |
+| stope-design | write-grades-and-grade-legend.cs | Writes interrogated INT_ fields onto the blocks and applies an INT_AU range legend (2–2.6 light blue, 2.6–3 blue, 3–5 red, 5–12 pink, 12+ purple). |
 
 `decline-design/` is a separate Python set (numpy, scipy, lxml) that builds a decline and levels as a .dcf outside Deswik; see its `README.txt`.
 
