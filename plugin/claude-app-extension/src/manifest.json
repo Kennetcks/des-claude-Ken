@@ -1,0 +1,95 @@
+{
+  "manifest_version": "0.3",
+  "name": "deswik-claude",
+  "display_name": "Deswik CAD (Claude Assistant)",
+  "version": "0.3.0",
+  "description": "Lets Claude read and edit your open Deswik CAD drawing and Interactive Scheduler schedule.",
+  "long_description": "Connects the Claude desktop app to the **Kennet.DeswikClaude** plugin running inside Deswik CAD 2024.2 on this computer, over a local named pipe that only your Windows user can reach.\n\nClaude can read layers, the current selection, schedule fields and tasks. With your approval (shown as a pop-up inside Deswik), it can edit task fields, add dependencies, run levelling, run IS/CAD commands, and run C# scripts it writes.\n\nRequires Deswik CAD to be open with the plugin loaded.",
+  "author": {
+    "name": "Kennet"
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/server/index.js"
+      ]
+    }
+  },
+  "tools": [
+    {
+      "name": "get_deswik_guide",
+      "description": "Returns the working rules and the verified Deswik CAD / Scheduler API cheat sheet (needed before writing run_csharp code). Call once per conversation, together with get_context."
+    },
+    {
+      "name": "get_context",
+      "description": "Snapshot of what is open: CAD document, active layer, selection count, whether the Interactive Scheduler (IS) has a schedule loaded, task/dependency counts, resources, target start. Call this first in"
+    },
+    {
+      "name": "list_layers",
+      "description": "List CAD layer names (with visibility). Optional case-insensitive filter."
+    },
+    {
+      "name": "get_selection",
+      "description": "Describe the figures currently selected in CAD (type and layer)."
+    },
+    {
+      "name": "is_list_fields",
+      "description": "List all task fields/columns in the loaded schedule (display name, internal property name, category). Use the names returned here in other tools."
+    },
+    {
+      "name": "is_query_tasks",
+      "description": "Query tasks in the loaded IS schedule as a table. Always returns Id, Start, Finish, Duration plus the requested fields. Filters are ANDed. Numeric ops (gt, lt, ge, le) compare as numbers; equals/conta"
+    },
+    {
+      "name": "is_task_details",
+      "description": "All non-empty field values for one task, plus its predecessors and successors (link type, lag, layer)."
+    },
+    {
+      "name": "is_set_task_fields",
+      "description": "Change field values on one or more tasks (e.g. rate, duration, custom/production fields, constraint, notes). The user approves the full list first. Old values are kept so the user can press 'Undo last"
+    },
+    {
+      "name": "is_add_dependencies",
+      "description": "Add dependencies between tasks (native Deswik undo applies). link_type: FS, SS, FF, SF. lag examples: '0d', '2d', '12h', '-1d'. The user approves first."
+    },
+    {
+      "name": "is_level_schedule",
+      "description": "Run resource levelling on the loaded schedule with its current levelling settings. Can take a while. The user approves first."
+    },
+    {
+      "name": "list_is_commands",
+      "description": "List Interactive Scheduler command IDs (e.g. IS_LoadSchedule, IS_UpdateStartAndFinishDatesAll)."
+    },
+    {
+      "name": "run_is_command",
+      "description": "Run an Interactive Scheduler command by ID (opens the same dialog/action as the IS menu). The user approves first."
+    },
+    {
+      "name": "run_deswik_command",
+      "description": "Run a built-in Deswik CAD command by its CID (e.g. CID_View_Zoom_All, CID_EDIT_UNDO). The user approves first."
+    },
+    {
+      "name": "run_csharp",
+      "description": "Write and run C# inside Deswik for anything the other tools can't do: create/modify CAD geometry and layers, bulk analysis, reports, custom schedule edits. You supply the BODY of: object Run(Deswik.Gr"
+    }
+  ],
+  "tools_generated": true,
+  "keywords": [
+    "deswik",
+    "mining",
+    "scheduling",
+    "cad"
+  ],
+  "license": "MIT",
+  "compatibility": {
+    "platforms": [
+      "win32"
+    ],
+    "runtimes": {
+      "node": ">=16.0.0"
+    }
+  }
+}

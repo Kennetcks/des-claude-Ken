@@ -1,0 +1,390 @@
+[
+  {
+    "name": "get_deswik_guide",
+    "description": "Returns the working rules and the verified Deswik CAD / Scheduler API cheat sheet (needed before writing run_csharp code). Call once per conversation, together with get_context.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "get_context",
+    "description": "Snapshot of what is open: CAD document, active layer, selection count, whether the Interactive Scheduler (IS) has a schedule loaded, task/dependency counts, resources, target start. Call this first in a new conversation.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "list_layers",
+    "description": "List CAD layer names (with visibility). Optional case-insensitive filter.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "contains": {
+          "type": "string"
+        },
+        "max": {
+          "type": "integer",
+          "default": 300
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "get_selection",
+    "description": "Describe the figures currently selected in CAD (type and layer).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "max": {
+          "type": "integer",
+          "default": 200
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "is_list_fields",
+    "description": "List all task fields/columns in the loaded schedule (display name, internal property name, category). Use the names returned here in other tools.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "contains": {
+          "type": "string"
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "is_query_tasks",
+    "description": "Query tasks in the loaded IS schedule as a table. Always returns Id, Start, Finish, Duration plus the requested fields. Filters are ANDed. Numeric ops (gt, lt, ge, le) compare as numbers; equals/contains/ne/starts compare as text, case-insensitive.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Extra fields to return (display or property names)."
+        },
+        "id_contains": {
+          "type": "string"
+        },
+        "where": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "field": {
+                "type": "string"
+              },
+              "op": {
+                "type": "string",
+                "enum": [
+                  "equals",
+                  "ne",
+                  "contains",
+                  "starts",
+                  "gt",
+                  "lt",
+                  "ge",
+                  "le",
+                  "empty",
+                  "notempty"
+                ]
+              },
+              "value": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "field",
+              "op"
+            ]
+          }
+        },
+        "include_parents": {
+          "type": "boolean",
+          "default": false
+        },
+        "offset": {
+          "type": "integer",
+          "default": 0
+        },
+        "max_rows": {
+          "type": "integer",
+          "default": 100
+        }
+      }
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "is_task_details",
+    "description": "All non-empty field values for one task, plus its predecessors and successors (link type, lag, layer).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "task_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "task_id"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "is_set_task_fields",
+    "description": "Change field values on one or more tasks (e.g. rate, duration, custom/production fields, constraint, notes). The user approves the full list first. Old values are kept so the user can press 'Undo last AI change'. Schedule recalculates afterwards.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "One line explaining why, shown to the user."
+        },
+        "changes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "task_id": {
+                "type": "string"
+              },
+              "field": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "task_id",
+              "field",
+              "value"
+            ]
+          }
+        }
+      },
+      "required": [
+        "changes",
+        "reason"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "is_add_dependencies",
+    "description": "Add dependencies between tasks (native Deswik undo applies). link_type: FS, SS, FF, SF. lag examples: '0d', '2d', '12h', '-1d'. The user approves first.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string"
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "from_id": {
+                "type": "string"
+              },
+              "to_id": {
+                "type": "string"
+              },
+              "link_type": {
+                "type": "string",
+                "enum": [
+                  "FS",
+                  "SS",
+                  "FF",
+                  "SF"
+                ],
+                "default": "FS"
+              },
+              "lag": {
+                "type": "string"
+              },
+              "layer_id": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "from_id",
+              "to_id"
+            ]
+          }
+        }
+      },
+      "required": [
+        "dependencies",
+        "reason"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "is_level_schedule",
+    "description": "Run resource levelling on the loaded schedule with its current levelling settings. Can take a while. The user approves first.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "list_is_commands",
+    "description": "List Interactive Scheduler command IDs (e.g. IS_LoadSchedule, IS_UpdateStartAndFinishDatesAll).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "run_is_command",
+    "description": "Run an Interactive Scheduler command by ID (opens the same dialog/action as the IS menu). The user approves first.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "command_id": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "command_id",
+        "reason"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "run_deswik_command",
+    "description": "Run a built-in Deswik CAD command by its CID (e.g. CID_View_Zoom_All, CID_EDIT_UNDO). The user approves first.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "command_id": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "command_id",
+        "reason"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": false
+    }
+  },
+  {
+    "name": "run_csharp",
+    "description": "Write and run C# inside Deswik for anything the other tools can't do: create/modify CAD geometry and layers, bulk analysis, reports, custom schedule edits. You supply the BODY of: object Run(Deswik.Graphics.Application App, Deswik.Scheduler.Engine.Schedule Schedule, StringBuilder Out). Schedule may be null. Write results with Out.AppendLine(...). C# 5 ONLY (no $\"\" interpolation, no ?. , no nameof, no => members, no out var). Read-only code (modifies=false) runs straight away; code that changes data shows the user an approval window unless they turned on auto-approve. Set modifies honestly. Every script is saved to the Scripts folder.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "Short title of what the code does."
+        },
+        "usings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Extra namespaces, e.g. Deswik.Graphics.Figures"
+        },
+        "code": {
+          "type": "string"
+        },
+        "modifies": {
+          "type": "boolean",
+          "description": "true if the code changes the drawing or schedule."
+        }
+      },
+      "required": [
+        "description",
+        "code",
+        "modifies"
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": false
+    }
+  }
+]
