@@ -96,3 +96,58 @@ Kennet's follow-up (2026-10-12): run the 5 m blocks for every ore drive, judge w
 - Deswik's interrogation matched the Python estimate within 0.3%.
 
 Result 2026-10-12: 2,535 blocks, [figure removed]. OD [figure removed], other drives [figure removed], trial drives [figure removed].
+
+## 5 m blocks v2 (all grades, split at 2.6, floor to floor)
+Kennet's redo (2026-10-12), saved on new layers `...\STOPE DESIGN\5M BLOCKS MINE V2\{ORE DRIVES, OTHER DRIVES, NO DRIVE, NO DRIVE\TRIAL ORE DRIVES}`; v1 is left untouched. Scripts: `design2.py`, `run_all2.py`, `run_virtual2.py`, `post2.py`, `make_geom2.py`, `*-v2.cs` in `scripts/stope-design/whole-mine/`.
+
+- **Height.** Base on the drive floor, maximum 22 m. When a drive passes overhead within 22.5 m of the floor (B/T, not blind), the top is that drive's floor: floor to floor, never lowered (`BREAKTHROUGH=Y`). Blind blocks are capped at 22 m and lowered in 2.5 m steps while the top band is below 2.5 g/t (minimum 7.5 m).
+- **No grade filter.** Every block with grade is kept on ore drives and trial drives; blocks below 1.5 g/t show grey and semi-transparent. On other drive types (ACC, MLA, ISP, RAD) only blocks above 1.5 g/t are kept, so no blocks follow access drives through waste.
+- **Split.** A block below 2.6 g/t is tested for one cut: along strike every 0.5 m (pieces ≥ 1.5 m) or by height every 2.5 m (pieces ≥ 5 m). It is split only when one piece is above 2.6 g/t, at the cut with the most tonnes × (grade − 2.6). Pieces are named `B07a`/`B07b`, with `SPLIT=STRIKE|HEIGHT` and `BASE_ABOVE_FLOOR` for the upper piece of a height split.
+- **Overlap order.** Ore blocks (> 1.5 g/t) claim space before grey ones, then OD, other drives, trial drives, as in v1. The decline standoff is still 15 m.
+- **Legend `5m blocks AU v2`** on `INT_AU`, from the drawing's `AU` legend bins (Kennet's image): below 1.5 grey (LegendItem `Transparency` 90; 255 is opaque), 1.5–2 cyan, 2–3 green, 3–4 yellow, 4–6 orange, 6–10 red, 10+ magenta.
+- **Invalid solids.** 6 of 4,034 blocks came out with `Polyface.Volume == -1` (end sections crossing on a tight bend) and were skipped by interrogation. Check for that after creating blocks; `hull_invalid_blocks.py` rebuilds them as convex hulls, then interrogate just those.
+- **Result.** 4,034 blocks, [figure removed] (Deswik). Grey < 1.5: 1,272 blocks, [figure removed]. 1.5–2.6: 1,081 blocks, [figure removed]. Above 2.6: 1,681 blocks, [figure removed]. 703 split pieces; 351 of them are above 2.6 ([tonnes removed]). 2,043 blocks are floor to floor (B/T).
+- **Interrogation is slow.** About 4,000 solids take more than the 60 s tool wait; the run keeps going in Deswik. Poll the CSV size until it stops growing before writing grades.
+
+## 5 m blocks v3 (Kennet's review of v2)
+Kennet (2026-10-12) on v2: "it looks much better" but asked for these changes. They are built on `...\STOPE DESIGN\5M BLOCKS MINE V3`, and v2 is kept. Scripts: `design3.py`, `run_all3.py`, `run_virtual3.py`, `post3.py`, `make_geom3.py`, `*-v3.cs`, `replace-invalid-blocks-v3.cs`.
+
+- **Always full height.** Blocks are never lowered. They go floor to floor where a drive is above within 22 m, otherwise 22 m. His example: a low-grade block that v2 had cut to 9.5 m should "extend all the way".
+- **No gaps under a block.** Ore drive and trial drive blocks are kept even with no grade. His example: a block with ore on top had "nothing at the bottom".
+- **Split only vertically.** Use one cut along strike, so both pieces are full height, never one above the other. Try for a piece above 2.6 g/t first. If no cut gives one, try for a piece above 2.0 g/t (only when the block is below 2.0). `SPLIT` holds `STRIKE 2.6` or `STRIKE 2.0`.
+- **Overlap bug fixed.** The 1 m voxel overlap check counted voxels shared on the boundary between neighbouring blocks of the same drive, so small pieces were dropped. Overlap is now only checked against other drives' blocks.
+- **Legend.** Kennet edited `5m blocks AU v2` himself (grey below 2, cyan 2–2.6, green 2.6–3, then yellow, orange, red, magenta). Read it and colour by the first item that matches; never rebuild or `Clear()` it.
+- **Invalid solids are found at creation.** `create-blocks-mine-v3.cs` lists solids with Volume < 0 (15 of 4,202). Run `hull_invalid_blocks.py` and `replace-invalid-blocks-v3.cs` on them before interrogating. Interrogation and grade writing only touch blocks without `INT_DATE`, so both can be re-run.
+- **Result.** 4,202 blocks, [figure removed]. Below 2: 2,031 blocks, [figure removed]. 2–2.6: 698 blocks, [figure removed]. Above 2.6: 1,473 blocks, [figure removed]. 660 split pieces.
+
+## 5 m blocks v4 (horizontal splits): current rules
+Kennet (2026-10-12) first asked for vertical splits (v3), then corrected himself: "you need to split the solids horizontally, I made a mistake". v4 is the same as v3 except that the one cut is by height: every 2.5 m, both pieces at least 5 m, one piece above the other. Together the two pieces always fill the full column, from floor to floor or 22 m. The split looks for a piece above 2.6 g/t first, and above 2.0 g/t only when no cut gives that and the block is below 2.0. `SPLIT` is `HEIGHT 2.6` or `HEIGHT 2.0`, and `BASE_ABOVE_FLOOR` gives the upper piece's base. The blocks are on `...\STOPE DESIGN\5M BLOCKS MINE V4`, and V2 and V3 are kept. Scripts: `design4.py`, `run_all4.py`, `run_virtual4.py`, `post4.py`, `make_geom4.py`, `*-v4.cs`.
+
+Result: 4,756 blocks, [figure removed]. Below 2: 2,132 blocks, [figure removed]. 2–2.6: 859 blocks, [figure removed]. Above 2.6: 1,765 blocks, [figure removed]. 1,763 split pieces. 14 bend solids were rebuilt as hulls.
+
+## 5 m blocks v5 (also split ore blocks with a low-grade end): current rules
+Kennet (2026-10-12) on v4: "you need to be smart sometimes". A block can be above 2.6 g/t over its full height while its top (or bottom) section is below 2. Split it anyway, "even though the whole block is still above the cut-off", so the high-grade and low-grade sections show as separate blocks. v5 is v4 plus this rule:
+- **Ore blocks too.** A block at or above 2.6 g/t gets one horizontal cut when one piece is above 2.6 and the other is below 2.0. The cut is chosen to maximise tonnes × (grade − 2.6) of the high piece, and `SPLIT` is `HEIGHT 2.6 LOW<2`.
+
+The blocks are on `...\STOPE DESIGN\5M BLOCKS MINE V5`, and V2 to V4 are kept. Scripts: `design5.py`, `run_all5.py`, `run_virtual5.py`, `post5.py`, `make_geom5.py`, `*-v5.cs`.
+
+Result: 4,910 blocks, [figure removed]. Below 2: 2,276 blocks, [figure removed]. 2–2.6: 864 blocks, [figure removed]. Above 2.6: 1,770 blocks, [figure removed]. 305 ore blocks were split into high and low: [figure removed] versus [figure removed].
+
+## 5 m blocks v6 (recover ore left beside the walls)
+Kennet (2026-10-12) on v5 sent sections where stopes left good ore behind. He said "I could always move the position of the ore drive later" and "you do not need to move the drive, focus on the stopes". The blocks are on `...\STOPE DESIGN\5M BLOCKS MINE V6`, and V2 to V5 are kept. Scripts: `design6.py`, `run_all6.py`, `run_virtual6.py`, `post6.py`, `make_geom6.py`, `*-v6.cs`, plus `capture.py` and `missed.py` to measure recovery.
+
+- **Base free of the drive.** The stope base stays at the drive floor level, but its walls are no longer held inside the drive width. Before, every stope kinked back to the drive at the bottom and left the ore beside it.
+- **Wider search and the standard footwall.** Walls range ±17 m, which is the edge of the exported corridor. The dip minimum is 50°, the standard footwall minimum; 55° is only preferred. Walls have 5 points instead of 4.
+- **Whole-wall moves.** Besides moving single points, the nudge loop translates a whole wall or tilts it about its base or top. Single-point moves couldn't pass the convex and dip checks, so the walls never reached ore a few metres away. Each drive takes about 3× longer (the mine runs in about 21 min).
+- **How to check recovery.** `capture.py` gives the share of ≥ 2.6 g/t unmined model ore inside the blocks; V5 had 71%. `missed.py` sorts the rest by distance. For V5, [figure removed] sat within 4 m of a block, mostly beside the walls, and about [tonnes removed] sat 6–25 m away, out of reach of the drives.
+- **Result (Deswik).** 4,770 blocks, [figure removed]. Above 2.6: 1,787 blocks, [figure removed] (V5: [figure removed]). 2–2.6: [tonnes removed]. Below 2: [figure removed].
+
+## 5 m blocks v7 (trial drives for unreached ore, intersection solids): current rules
+Kennet (2026-10-12) on v6: "go for them, and create new trial drives for them", meaning the ≥ 2.6 g/t ore 6–25 m from any block. He also asked for intersection solids: "above the MLA, sometimes you need to create a solid too, this is called intersection". The blocks are on `...\STOPE DESIGN\5M BLOCKS MINE V7`. V7 is the V6 blocks unchanged, plus the new trial drive blocks and the intersections.
+
+- **Finding the pockets (`pockets2.py`).** Take ≥ 2.6 g/t unmined ore more than 4 m from any V6 block. Cluster it in 10 m cells (≥ 150 t a cell, 26-connected) and keep pockets of ≥ 1,000 t. Each pocket is cut into slices on the nearest ore drive's 22 m level series, so a new drive sits on a real level. A PCA strike line is fitted per slice, giving the trial floor line (T000…). The first run gave 107 lines through [tonnes removed] of ore.
+- **Model.** `export-trial-drive-cells-v7-read-only.cs` exports the parent cells within 17.5 m of the new lines. `raster.py n` rasterises corridor, first trial drives and new trial drives together.
+- **Blocks (`run_virtual7.py`, `post7.py`).** The v6 design runs on each T line. V6 blocks claim their space first, and a new block is dropped if over 25% of it overlaps a kept block, or if it is within 15 m of the decline. A T drive with no block above 2.0 g/t is dropped as a whole, since it only adds grey blocks.
+- **Intersections (`intersections.py`).** Where two drive ends face each other within 0.5–12 m on the same floor (±2 m), the gap between them is the junction, usually where the MLA or an access comes in. That gap gets a solid: the convex hull of the two end blocks' end faces, so it is full height like the blocks. Each end is used once, and a solid is dropped if over 25% of it overlaps another block. Intersection solids are named `<lode><level> INT <drive>/<drive>` and go on `...\INTERSECTIONS`. A drive that starts from the side of another drive (a T-junction) is not filled yet.
+- **Recovery.** `PRE=n python3 capture.py kept6.pkl kept7f.pkl` measures it on the bigger raster. The share of ≥ 2.6 ore inside blocks went from 68% to 76%.
+- **Result (Deswik).** 5,682 blocks, [figure removed]. Above 2.6: 1,960 blocks, [figure removed] (V6: [figure removed]). The new trial drives add 877 blocks, [figure removed], of which [figure removed] is above 2.6. The ore they reach is mostly diluted into cyan and grey full-height blocks. The 35 intersections add [figure removed], including W148 INT 3000FBF/3000D19 at [figure removed].
