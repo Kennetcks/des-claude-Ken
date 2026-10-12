@@ -17,6 +17,7 @@ From v0.3.0 the plugin builds every file in `knowledge/` into its DLL, and `get_
 | [tunnels-by-rule.md](knowledge/tunnels-by-rule.md) | Refreshable solids from strings with Section Along Polyline Rules; sections per ACT_TYPE |
 | [decline-and-level-design.md](knowledge/decline-and-level-design.md) | Decline and level concept design: 1:7 stacked loops, standoffs, one ACC per group, take-offs, RAR clearance, checks and delivery; .dcf file format notes |
 | [block-model-interrogation.md](knowledge/block-model-interrogation.md) | Batch interrogating solids against a block model for grade and tonnes; API, gotchas, what to report |
+| [stope-design.md](knowledge/stope-design.md) | Stopes along an ore drive from a block model: the engineer's rules, how existing stopes look, the method, reading a `.gmdlb` block model, loading layers |
 | [task-solids.md](knowledge/task-solids.md) | Task solid attributes and geometry notes, working style |
 
 ## Adding to it
