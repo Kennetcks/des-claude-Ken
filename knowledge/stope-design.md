@@ -132,3 +132,12 @@ Kennet (2026-10-12) on v4: "you need to be smart sometimes". A block can be abov
 The blocks are on `...\STOPE DESIGN\5M BLOCKS MINE V5`, and V2 to V4 are kept. Scripts: `design5.py`, `run_all5.py`, `run_virtual5.py`, `post5.py`, `make_geom5.py`, `*-v5.cs`.
 
 Result: 4,910 blocks, [figure removed]. Below 2: 2,276 blocks, [figure removed]. 2–2.6: 864 blocks, [figure removed]. Above 2.6: 1,770 blocks, [figure removed]. 305 ore blocks were split into high and low: [figure removed] versus [figure removed].
+
+## 5 m blocks v6 (recover ore left beside the walls): current rules
+Kennet (2026-10-12) on v5 sent sections where stopes left good ore behind. He said "I could always move the position of the ore drive later" and "you do not need to move the drive, focus on the stopes". The blocks are on `...\STOPE DESIGN\5M BLOCKS MINE V6`, and V2 to V5 are kept. Scripts: `design6.py`, `run_all6.py`, `run_virtual6.py`, `post6.py`, `make_geom6.py`, `*-v6.cs`, plus `capture.py` and `missed.py` to measure recovery.
+
+- **Base free of the drive.** The stope base stays at the drive floor level, but its walls are no longer held inside the drive width. Before, every stope kinked back to the drive at the bottom and left the ore beside it.
+- **Wider search and the standard footwall.** Walls range ±17 m, which is the edge of the exported corridor. The dip minimum is 50°, the standard footwall minimum; 55° is only preferred. Walls have 5 points instead of 4.
+- **Whole-wall moves.** Besides moving single points, the nudge loop translates a whole wall or tilts it about its base or top. Single-point moves couldn't pass the convex and dip checks, so the walls never reached ore a few metres away. Each drive takes about 3× longer (the mine runs in about 21 min).
+- **How to check recovery.** `capture.py` gives the share of ≥ 2.6 g/t unmined model ore inside the blocks; V5 had 71%. `missed.py` sorts the rest by distance. For V5, [figure removed] sat within 4 m of a block, mostly beside the walls, and about [tonnes removed] sat 6–25 m away, out of reach of the drives.
+- **Result (Deswik).** 4,770 blocks, [figure removed]. Above 2.6: 1,787 blocks, [figure removed] (V5: [figure removed]). 2–2.6: [tonnes removed]. Below 2: [figure removed].
