@@ -14,6 +14,8 @@ var m = Activator.CreateInstance(mtT, new object[]{App.CommonSettings});
 mtT.GetProperty("FileName").SetValue(m, bm, null);
 mtT.GetProperty("Use").SetValue(m, true, null);
 var mtProp = mtT.GetProperty("ModelType"); mtProp.SetValue(m, Enum.Parse(mtProp.PropertyType,"BlockGeoModel"), null);
+// density from the model's own field, otherwise Deswik uses DefaultDensity (2.8) for every block
+var ms = mtT.GetField("ModelSettings").GetValue(m); ms.GetType().GetProperty("DensityFieldName").SetValue(ms, "DENSITY", null);
 var models = rulesT.GetProperty("Models").GetValue(rules,null);
 models.GetType().GetMethod("Add").Invoke(models,new object[]{m});
 
@@ -26,7 +28,7 @@ fld.Name = "AU"; fld.DestinationName = "AU";
 fld.FieldHandling = new Deswik.Interrogation.InterrogationFieldHandling(Deswik.Interrogation.InterrogationFieldHandling.FieldHandlingTypeConstants.MassWeighted, 0);
 p.Fields.Add(fld);
 ib.FieldsToInterrogate = p;
-ib.ModelDensityName = "DENSITY";
+ib.ModelDensityName = "DENSITY";   // output column name only
 ib.CalcModelFields = true;
 ib.CreateNewID = true; ib.NewIDField = "INT_ID"; ib.UseExistingIDField = false;
 var sel = new Deswik.Graphics.Collections.Selection();
