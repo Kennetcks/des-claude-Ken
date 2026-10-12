@@ -31,6 +31,15 @@ How stopes were designed along an ore drive in a 2026-10 session (the mine, Desw
 5. **Interrogate** with `scripts/interrogation/batch-interrogate-solids-to-csv.cs`, with density from the model field. Write the INT_ fields onto the stopes. The Deswik numbers matched the Python estimate within 1%.
 6. **Report** each stope's length, width, tonnes and grade, the grade after the drive overlap is cut, and why any stope is shorter than the maximum. Leave saving the drawing to the user.
 
+## 5 m blocks along a whole drive (engineer picks stopes and pillars)
+Kennet's follow-up request: instead of finished stopes, cut the whole drive into 5 m blocks whose walls follow the lode, grade each block, and colour them by grade so he can choose the stopes and put pillars where grade is lower.
+1. `blocks_along_drive.py <folder> 4 2.5 0.15` uses the same wall shaping as v3, but over the full drive length and with no stope grade limit. It writes one closed solid per 5 m (neighbours share their end section; a remainder under 2.5 m joins the last block) to `blocks_5m_geometry.txt`, plus a Python estimate in `blocks.txt`.
+2. `create-blocks-from-geometry.cs` builds them on `STOPE DESIGN\5M BLOCKS`, named `G410 S100 B01..`, with LH_Stope tags plus `BLOCK`, `CH_FROM`, `CH_TO`.
+3. Interrogate with `batch-interrogate-solids-to-csv.cs` (set LAY to the blocks layer). The CSV carries the figure attributes, so match rows by `BLOCK`.
+4. `write-grades-and-grade-legend.cs` writes the INT_ fields, builds a range legend on `INT_AU` and applies it to the layer: ≥2.6 blue (0,0,255), 2–2.6 light blue (0,176,255), 1–2 green and 0–1 grey from the drawing's `AU` legend. Legend item `From`/`To` are strings; clone the AU legend's last item for an open-ended top band.
+5. 298ID result: 33 blocks, [tonnes removed]. Ch 0–65 is ore (2.0–7.8 g/t), ch 65–115 is below 1.3 g/t, ch 115–120 is 2.2 g/t, then 0.4–1.8 g/t. The Deswik grades matched the Python estimate within about 3%.
+- Kennet called the layer "2m blocks" while asking for 5 m blocks; I named it `5M BLOCKS` and said so.
+
 ## Reading a Deswik `.gmdlb` block model from run_csharp
 - Open it with `new Deswik.BlockModel.ManagedGeoModels.BlockModel(path)`, then call `Load(ModelOpenState.OpenForReadNotIndexed, CancellationToken.None)`. Its `BlockGeoModel` property is a `Deswik.GeoModel.BlockModel`. Calling `Deswik.GeoModel.BlockModel.Open(...)` directly returned null. Dispose the wrapper when finished.
 - `Metadata` holds the Origin, the parent size (XSize/YSize/ZSize), NX/NY/NZ and the rotation. Sub-blocked models store one record per sub-block.
