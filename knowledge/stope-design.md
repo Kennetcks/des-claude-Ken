@@ -96,3 +96,15 @@ Kennet's follow-up (2026-10-12): run the 5 m blocks for every ore drive, judge w
 - Deswik's interrogation matched the Python estimate within 0.3%.
 
 Result 2026-10-12: 2,535 blocks, [figure removed]. OD [figure removed], other drives [figure removed], trial drives [figure removed].
+
+## 5 m blocks v2 (all grades, split at 2.6, floor to floor)
+Kennet's redo (2026-10-12), saved on new layers `...\STOPE DESIGN\5M BLOCKS MINE V2\{ORE DRIVES, OTHER DRIVES, NO DRIVE, NO DRIVE\TRIAL ORE DRIVES}`; v1 is left untouched. Scripts: `design2.py`, `run_all2.py`, `run_virtual2.py`, `post2.py`, `make_geom2.py`, `*-v2.cs` in `scripts/stope-design/whole-mine/`.
+
+- **Height.** Base on the drive floor, maximum 22 m. When a drive passes overhead within 22.5 m of the floor (B/T, not blind), the top is that drive's floor: floor to floor, never lowered (`BREAKTHROUGH=Y`). Blind blocks are capped at 22 m and lowered in 2.5 m steps while the top band is below 2.5 g/t (minimum 7.5 m).
+- **No grade filter.** Every block with grade is kept on ore drives and trial drives; blocks below 1.5 g/t show grey and semi-transparent. On other drive types (ACC, MLA, ISP, RAD) only blocks above 1.5 g/t are kept, so no blocks follow access drives through waste.
+- **Split.** A block below 2.6 g/t is tested for one cut: along strike every 0.5 m (pieces ≥ 1.5 m) or by height every 2.5 m (pieces ≥ 5 m). It is split only when one piece is above 2.6 g/t, at the cut with the most tonnes × (grade − 2.6). Pieces are named `B07a`/`B07b`, with `SPLIT=STRIKE|HEIGHT` and `BASE_ABOVE_FLOOR` for the upper piece of a height split.
+- **Overlap order.** Ore blocks (> 1.5 g/t) claim space before grey ones, then OD, other drives, trial drives, as in v1. The decline standoff is still 15 m.
+- **Legend `5m blocks AU v2`** on `INT_AU`, from the drawing's `AU` legend bins (Kennet's image): below 1.5 grey (LegendItem `Transparency` 90; 255 is opaque), 1.5–2 cyan, 2–3 green, 3–4 yellow, 4–6 orange, 6–10 red, 10+ magenta.
+- **Invalid solids.** 6 of 4,034 blocks came out with `Polyface.Volume == -1` (end sections crossing on a tight bend) and were skipped by interrogation. Check for that after creating blocks; `hull_invalid_blocks.py` rebuilds them as convex hulls, then interrogate just those.
+- **Result.** 4,034 blocks, [figure removed] (Deswik). Grey < 1.5: 1,272 blocks, [figure removed]. 1.5–2.6: 1,081 blocks, [figure removed]. Above 2.6: 1,681 blocks, [figure removed]. 703 split pieces; 351 of them are above 2.6 ([tonnes removed]). 2,043 blocks are floor to floor (B/T).
+- **Interrogation is slow.** About 4,000 solids take more than the 60 s tool wait; the run keeps going in Deswik. Poll the CSV size until it stops growing before writing grades.
