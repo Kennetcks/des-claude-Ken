@@ -19,7 +19,9 @@ import sys, collections, numpy as np
 D = sys.argv[1].rstrip('/') + '/'
 CUT, MIN_GRADE, MIN_W, MAX_L, PILLAR = 2.5, 2.6, 2.2, 40, 5
 DRIVE_H, DRIVE_W, HEIGHT, BASE_BELOW_BACK = 4.5, 4.5, 20.0, 1.0
-NL, SEC, SMOOTH_S, MAX_STEP = 5, 5.0, 5, 1.0
+NL, SEC, SMOOTH_S, MAX_STEP = int(sys.argv[2]) if len(sys.argv)>2 else 4, 5.0, 5, 1.0
+MARG = float(sys.argv[3]) if len(sys.argv)>3 else CUT   # marginal grade a wall strip must carry to be taken in
+ORE_SHARE = float(sys.argv[4]) if len(sys.argv)>4 else 0.3   # ...or this share of its tonnes in >= CUT blocks
 ORIGIN, PARENT = (7770, 62610, 5930), (4, 10, 10)
 b = np.genfromtxt(D+'blocks.csv', delimiter=',', skip_header=1, usecols=range(8))
 fs = np.genfromtxt(D+'floor_string.csv', delimiter=',', skip_header=1)
@@ -46,7 +48,7 @@ for a, s in enumerate(Sg):
         for e, z in enumerate(Zg):
             k = look(x, y, z)
             if k >= 0: T[a, c, e] = 0.0625*b[k, 7]; G[a, c, e] = b[k, 6]
-V = T*(G-CUT); nmin = int(np.ceil(MIN_W/0.25)); inside = np.abs(Ug) <= DRIVE_W/2
+V = T*(G-MARG); nmin = int(np.ceil(MIN_W/0.25)); inside = np.abs(Ug) <= DRIVE_W/2
 # 2. walls per 1 m station
 S1 = np.arange(0.5, Sg[-1], 1.0); FW = np.zeros((len(S1), NL)); HW = np.zeros_like(FW)
 for a, s in enumerate(S1):
@@ -68,9 +70,9 @@ def evaluate(ss, fw, hw):
     f = np.array([np.interp(S, ss, fw[:, q]) for q in range(NL)]); h = np.array([np.interp(S, ss, hw[:, q]) for q in range(NL)])
     f = np.array([[np.interp(z, LZ, f[:, a]) for z in Zg] for a in range(len(S))]); h = np.array([[np.interp(z, LZ, h[:, a]) for z in Zg] for a in range(len(S))])
     m = (Ug[None, :, None] >= f[:, None, :]) & (Ug[None, :, None] <= h[:, None, :]); t = T[sm]*m
-    return t.sum(), (t*G[sm]).sum()
+    return t.sum(), (t*G[sm]).sum(), (t*(G[sm] >= CUT)).sum()
 # 3. chainages (two stopes)
-TM = np.array([evaluate(np.array([s-0.5, s+0.5]), np.array([FW[a], FW[a]]), np.array([HW[a], HW[a]])) for a, s in enumerate(S1)])
+TM = np.array([evaluate(np.array([s-0.5, s+0.5]), np.array([FW[a], FW[a]]), np.array([HW[a], HW[a]])) for a, s in enumerate(S1)])[:, :2]
 cT = np.r_[0, np.cumsum(TM[:, 0])]; cM = np.r_[0, np.cumsum(TM[:, 1])]; g = lambda i, j: (cM[j]-cM[i])/max(cT[j]-cT[i], 1e-9)
 ore = np.where((G >= CUT).any(axis=(1, 2)))[0]; ore = np.unique((Sg[ore]//1).astype(int))
 runs = [[ore[0]]]
@@ -90,7 +92,7 @@ cs_out = ''
 for a, c in ((i, j), (k, l)):
     ss = np.array(list(np.arange(a, c, SEC))+[c], float)
     fw = np.array([[np.interp(s, S1, FW[:, q]) for q in range(NL)] for s in ss]); hw = np.array([[np.interp(s, S1, HW[:, q]) for q in range(NL)] for s in ss])
-    t0, m0 = evaluate(ss, fw, hw)
+    t0, m0, o0 = evaluate(ss, fw, hw)
     for _ in range(12):
         changed = 0
         for si in range(len(ss)):
@@ -101,8 +103,10 @@ for a, c in ((i, j), (k, l)):
                         ok = hw[si, q]-fw[si, q] >= MIN_W-1e-9 and (q > 0 or (fw[si, 0] >= -DRIVE_W/2-1e-9 and hw[si, 0] <= DRIVE_W/2+1e-9))
                         ok = ok and all(abs(A[si, q]-v) <= MAX_STEP for v in [A[x, q] for x in (si-1, si+1) if 0 <= x < len(ss)]+[A[si, y] for y in (q-1, q+1) if 0 <= y < NL])
                         if ok:
-                            t1, m1 = evaluate(ss, fw, hw); dt, dm = t1-t0, m1-m0
-                            if (step > 0 and dt > 0 and dm/dt >= CUT) or (step < 0 and dt < 0 and dm/dt < CUT): t0, m0 = t1, m1; changed += 1; continue
+                            t1, m1, o1 = evaluate(ss, fw, hw); dt, dm, do = t1-t0, m1-m0, o1-o0
+                            # take a strip in if it carries the marginal grade or is mostly >= cut-off blocks; drop it only if neither
+                            good = dt != 0 and (dm/dt >= MARG or do/dt >= ORE_SHARE)
+                            if ((step > 0 and dt > 0 and good) or (step < 0 and dt < 0 and not good)) and (m1/t1 > MIN_GRADE): t0, m0, o0 = t1, m1, o1; changed += 1; continue
                         A[si, q] = old
         if not changed: break
     Vx, F = [], []; R = 2*NL
@@ -118,6 +122,10 @@ for a, c in ((i, j), (k, l)):
             F += [(x, z, y) for x, y, z in tri] if flip else tri
     Vx = np.array(Vx)
     if sum(np.dot(Vx[x], np.cross(Vx[y], Vx[z])) for x, y, z in F) < 0: F = [(x, z, y) for x, y, z in F]
-    print('chainage %d-%d (%d m): %.0f t @ %.2f g/t, width %.2f-%.2f m' % (a, c, c-a, t0, m0/t0, (hw-fw).min(), (hw-fw).max()))
+    sm = (Sg > ss[0]) & (Sg < ss[-1]); orebl = T[sm]*(G[sm] >= CUT); tot = orebl.sum()
+    f_ = np.array([[np.interp(z, LZ, [np.interp(S_, ss, fw[:, q]) for q in range(NL)]) for z in Zg] for S_ in Sg[sm]]); h_ = np.array([[np.interp(z, LZ, [np.interp(S_, ss, hw[:, q]) for q in range(NL)]) for z in Zg] for S_ in Sg[sm]])
+    cap = (orebl*((Ug[None, :, None] >= f_[:, None, :]) & (Ug[None, :, None] <= h_[:, None, :]))).sum()
+    print('chainage %d-%d (%d m): %.0f t @ %.2f g/t, width %.2f-%.2f m, >=%.1f captured %.0f%%' % (a, c, c-a, t0, m0/t0, (hw-fw).min(), (hw-fw).max(), CUT, 100*cap/tot))
+    np.savez(D+'walls_%d.npz' % a, ss=ss, fw=fw, hw=hw, LZ=LZ, Sg=Sg, Ug=Ug, Zg=Zg, T=T, G=G)
     cs_out += 'stV.Add(new double[]{'+','.join('%.3f' % x for v in Vx for x in v)+'});\n'+'stF.Add(new int[]{'+','.join(str(x+1) for f in F for x in f)+'});\n'
 open(D+'geom.cs', 'w').write(cs_out)

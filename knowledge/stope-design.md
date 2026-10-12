@@ -20,12 +20,12 @@ How stopes were designed along an ore drive in a 2026-10 session (the mine, Desw
 2. **Export the blocks** around the drive with `scripts/stope-design/export-blocks-around-drive-read-only.cs`. It took ~10 s for 0.4 M sub-blocks out of 55 M.
 3. **Design** with `scripts/stope-design/design_stopes.py` (v2, the version Kennet asked for after reviewing v1):
    - Sample the model on a 0.5 × 0.25 × 0.5 m grid in drive coordinates.
-   - Give each wall **5 points up its height**, not just top and bottom.
+   - Give each wall **4 points up its height**: the 4 corners plus at most 2 points between them on each wall. Kennet asked for this in v3, after v2 used 5.
    - At each 1 m station and level, place the walls where they maximise Σ tonnes × (grade − cut-off). That takes in whole ≥ cut-off blocks, including high-grade blocks beside the core, and stops at waste. Keep the width at least the minimum and the base inside the drive.
    - Smooth along strike (5 m) and up the wall.
    - Pick the chainages that maximise metal with each stope above the grade limit, staying inside the main ≥ cut-off run. Without that limit, the optimiser stretches a stope into low-grade tail just to add tonnes.
-   - Put a section every 5 m (like the existing stopes) and nudge each wall point 0.25 m out where the added strip is ≥ cut-off, or in where it is below. Keep neighbouring points within 1 m of each other so the walls stay smooth.
-   - Report how much of the ≥ cut-off tonnes near the drive ends up inside: 96–97% here.
+   - Put a section every 5 m (like the existing stopes) and nudge each wall point 0.25 m outward. Accept the move if the added strip carries the cut-off grade **or** at least 15% of its tonnes are in ≥ cut-off blocks, so blocks cut by a wall get taken in, while the stope stays above the grade limit. Pull a wall in only when the strip meets neither test. Keep neighbouring points within 1 m of each other so the walls stay smooth.
+   - Report how much of the ≥ cut-off tonnes near the drive ends up inside: 96–99% here. Kennet still saw blocks left behind at 96%.
    - **v1 lesson:** shaping on the mean grade of a 7 m band, with only top and bottom wall points, left high-grade blocks outside. Kennet caught it on a section view.
 4. **Build** the solids with `create-stopes-from-geometry.cs`. It makes a `new Polyface()` with `AddVertex(x,y,z)` and `AddTriangle(i,j,k)` (1-based indices), sets `pf.Layer`, and calls `App.ModelSpace.Entities.AddItem(pf,null,null,true,false)`. Check `pf.IsClosed` and `pf.Volume`, and add the layer attribute fields first.
 5. **Interrogate** with `scripts/interrogation/batch-interrogate-solids-to-csv.cs`, with density from the model field. Write the INT_ fields onto the stopes. The Deswik numbers matched the Python estimate within 1%.
@@ -39,3 +39,6 @@ How stopes were designed along an ore drive in a 2026-10 session (the mine, Desw
 
 ## Loading layers
 `App.ModelSpace.Entities` only holds layers that are loaded. In a file-per-layer `.dcf`, most layers can be present but empty until they are loaded: call `App.LoadLayer(layerName, true)`, then read `layer.Entities`.
+
+## Etiquette in the user's drawing
+- Don't change layer visibility in bulk. "Display all layers" means Deswik's display of the ticked layers, not ticking every layer. Turning on all 600+ layers froze Deswik for minutes. Record the visible layers before any change and restore exactly those.
