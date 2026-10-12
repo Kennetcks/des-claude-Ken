@@ -108,3 +108,14 @@ Kennet's redo (2026-10-12), saved on new layers `...\STOPE DESIGN\5M BLOCKS MINE
 - **Invalid solids.** 6 of 4,034 blocks came out with `Polyface.Volume == -1` (end sections crossing on a tight bend) and were skipped by interrogation. Check for that after creating blocks; `hull_invalid_blocks.py` rebuilds them as convex hulls, then interrogate just those.
 - **Result.** 4,034 blocks, [figure removed] (Deswik). Grey < 1.5: 1,272 blocks, [figure removed]. 1.5–2.6: 1,081 blocks, [figure removed]. Above 2.6: 1,681 blocks, [figure removed]. 703 split pieces; 351 of them are above 2.6 ([tonnes removed]). 2,043 blocks are floor to floor (B/T).
 - **Interrogation is slow.** About 4,000 solids take more than the 60 s tool wait; the run keeps going in Deswik. Poll the CSV size until it stops growing before writing grades.
+
+## 5 m blocks v3 (Kennet's review of v2)
+Kennet (2026-10-12) on v2: "it looks much better" but asked for these changes. They are built on `...\STOPE DESIGN\5M BLOCKS MINE V3`, and v2 is kept. Scripts: `design3.py`, `run_all3.py`, `run_virtual3.py`, `post3.py`, `make_geom3.py`, `*-v3.cs`, `replace-invalid-blocks-v3.cs`.
+
+- **Always full height.** Blocks are never lowered. They go floor to floor where a drive is above within 22 m, otherwise 22 m. His example: a low-grade block that v2 had cut to 9.5 m should "extend all the way".
+- **No gaps under a block.** Ore drive and trial drive blocks are kept even with no grade. His example: a block with ore on top had "nothing at the bottom".
+- **Split only vertically.** Use one cut along strike, so both pieces are full height, never one above the other. Try for a piece above 2.6 g/t first. If no cut gives one, try for a piece above 2.0 g/t (only when the block is below 2.0). `SPLIT` holds `STRIKE 2.6` or `STRIKE 2.0`.
+- **Overlap bug fixed.** The 1 m voxel overlap check counted voxels shared on the boundary between neighbouring blocks of the same drive, so small pieces were dropped. Overlap is now only checked against other drives' blocks.
+- **Legend.** Kennet edited `5m blocks AU v2` himself (grey below 2, cyan 2–2.6, green 2.6–3, then yellow, orange, red, magenta). Read it and colour by the first item that matches; never rebuild or `Clear()` it.
+- **Invalid solids are found at creation.** `create-blocks-mine-v3.cs` lists solids with Volume < 0 (15 of 4,202). Run `hull_invalid_blocks.py` and `replace-invalid-blocks-v3.cs` on them before interrogating. Interrogation and grade writing only touch blocks without `INT_DATE`, so both can be re-run.
+- **Result.** 4,202 blocks, [figure removed]. Below 2: 2,031 blocks, [figure removed]. 2–2.6: 698 blocks, [figure removed]. Above 2.6: 1,473 blocks, [figure removed]. 660 split pieces.
