@@ -27,7 +27,7 @@ namespace Kennet.DeswikClaude
         public ChatPanel(ClaudeChatPlugin plugin)
         {
             _settings = PluginSettings.Load();
-            _tools = new DeswikTools(plugin, this);
+            _tools = new DeswikTools(plugin, this, _settings);
             _agent = new ClaudeAgent(_tools, _settings);
 
             Dock = DockStyle.Fill;
@@ -47,7 +47,13 @@ namespace Kennet.DeswikClaude
             _undo.Click += (s, e) => UndoLast();
             var scripts = new Button { Text = "Scripts", AutoSize = true };
             scripts.Click += (s, e) => { try { System.Diagnostics.Process.Start(PluginSettings.ScriptsFolder); } catch { } };
-            top.Controls.AddRange(new Control[] { _model, key, newChat, _undo, scripts });
+            var guides = new Button { Text = "Guides", AutoSize = true };
+            guides.Click += (s, e) => { try { System.Diagnostics.Process.Start(PluginSettings.KnowledgeFolder); } catch { } };
+            var autoRead = new CheckBox { Text = "Auto-run reads", AutoSize = true, Checked = _settings.AutoApproveReadOnly, Padding = new Padding(4, 4, 0, 0) };
+            autoRead.CheckedChanged += (s, e) => { _settings.AutoApproveReadOnly = autoRead.Checked; SafeSave(); };
+            var autoChange = new CheckBox { Text = "Auto-approve changes", AutoSize = true, Checked = _settings.AutoApproveChanges, Padding = new Padding(4, 4, 0, 0) };
+            autoChange.CheckedChanged += (s, e) => { _settings.AutoApproveChanges = autoChange.Checked; SafeSave(); };
+            top.Controls.AddRange(new Control[] { _model, key, newChat, _undo, scripts, guides, autoRead, autoChange });
 
             // ---- transcript
             _log = new RichTextBox
@@ -86,7 +92,7 @@ namespace Kennet.DeswikClaude
             _agent.Status += s => _status.Text = s;
 
             AppendNote("Ask about the open drawing or the IS schedule, or ask Claude to build something. " +
-                       "Every change is shown to you for approval first. Enter = send, Shift+Enter = new line.");
+                       "Changes are shown to you for approval first unless 'Auto-approve changes' is ticked. Enter = send, Shift+Enter = new line.");
             if (string.IsNullOrWhiteSpace(_settings.ApiKey))
                 AppendNote("No API key needed if you chat from the Claude desktop app (Deswik extension installed). " +
                            "To chat here in the panel instead, click 'API key…'.");

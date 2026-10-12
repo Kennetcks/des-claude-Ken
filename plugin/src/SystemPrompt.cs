@@ -1,8 +1,61 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
+using System.Text;
+
 namespace Kennet.DeswikClaude
 {
     /// <summary>System prompt sent with every request (cached). Edit freely, then rebuild.</summary>
     public static class SystemPrompt
     {
+        private static string _full;
+
+        /// <summary>
+        /// The built-in guide plus the shared guides: the knowledge\*.md files embedded at build time,
+        /// then any *.md in %AppData%\Kennet.DeswikClaude\Knowledge (a file there replaces the embedded one with the same name).
+        /// Read once per Deswik session so the prompt stays cacheable; restart Deswik after adding guides.
+        /// </summary>
+        public static string Full
+        {
+            get
+            {
+                if (_full == null) _full = Text + Knowledge();
+                return _full;
+            }
+        }
+
+        private static string Knowledge()
+        {
+            var guides = new SortedDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            const string prefix = "Knowledge.";
+            try
+            {
+                var asm = Assembly.GetExecutingAssembly();
+                foreach (string res in asm.GetManifestResourceNames())
+                {
+                    if (!res.StartsWith(prefix, StringComparison.Ordinal)) continue;
+                    using (var st = asm.GetManifestResourceStream(res))
+                    using (var rd = new StreamReader(st, Encoding.UTF8))
+                        guides[res.Substring(prefix.Length)] = rd.ReadToEnd();
+                }
+            }
+            catch { }
+            try
+            {
+                foreach (string f in Directory.GetFiles(PluginSettings.KnowledgeFolder, "*.md"))
+                    guides[Path.GetFileName(f)] = File.ReadAllText(f, Encoding.UTF8);
+            }
+            catch { }
+            if (guides.Count == 0) return "";
+
+            var sb = new StringBuilder();
+            sb.Append("\n\nSHARED GUIDES\nRules and verified API notes learned in earlier sessions. Follow them unless the user asks otherwise. Values marked (site) came from one mine: check them in the open drawing.\n");
+            foreach (var g in guides)
+                sb.Append("\n===== ").Append(g.Key).Append(" =====\n").Append(g.Value.Trim()).Append("\n");
+            return sb.ToString();
+        }
+
         public const string Text = @"You are Claude, working as an assistant inside Deswik CAD 2024.2 (Deswik.Suite) for an underground mine planning engineer. You see and change the open CAD drawing and the Interactive Scheduler (IS) schedule only through the tools provided.
 
 HOW TO WORK

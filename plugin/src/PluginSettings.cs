@@ -12,6 +12,10 @@ namespace Kennet.DeswikClaude
         public string Model = "claude-sonnet-5-5";
         public string ApiKeyProtected = "";
         public int MaxTokens = 16000;
+        /// <summary>Run read-only tool calls and code (modifies=false) without the approval window.</summary>
+        public bool AutoApproveReadOnly = true;
+        /// <summary>Run changes without the approval window. Off by default; save often if you turn it on.</summary>
+        public bool AutoApproveChanges = false;
 
         public static readonly string[] Models = { "claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-5-5" };
 
@@ -30,6 +34,17 @@ namespace Kennet.DeswikClaude
             get
             {
                 string f = Path.Combine(Folder, "Scripts");
+                Directory.CreateDirectory(f);
+                return f;
+            }
+        }
+
+        /// <summary>Extra guides (*.md) appended to the built-in guide. Files here replace built-in ones with the same name.</summary>
+        public static string KnowledgeFolder
+        {
+            get
+            {
+                string f = Path.Combine(Folder, "Knowledge");
                 Directory.CreateDirectory(f);
                 return f;
             }

@@ -43,10 +43,13 @@ namespace Kennet.DeswikClaude
         private readonly IWin32Window _owner;
         private readonly Stack<List<FieldChange>> _undo = new Stack<List<FieldChange>>();
 
-        public DeswikTools(ClaudeChatPlugin plugin, IWin32Window owner)
+        private readonly PluginSettings _settings;
+
+        public DeswikTools(ClaudeChatPlugin plugin, IWin32Window owner, PluginSettings settings)
         {
             _plugin = plugin;
             _owner = owner;
+            _settings = settings;
         }
 
         public int UndoDepth { get { return _undo.Count; } }
@@ -184,7 +187,7 @@ namespace Kennet.DeswikClaude
   ""input_schema"": { ""type"": ""object"", ""properties"": { ""command_id"": { ""type"": ""string"" }, ""reason"": { ""type"": ""string"" } }, ""required"": [""command_id"", ""reason""] } },
 
 { ""name"": ""run_csharp"",
-  ""description"": ""Write and run C# inside Deswik for anything the other tools can't do: create/modify CAD geometry and layers, bulk analysis, reports, custom schedule edits. You supply the BODY of: object Run(Deswik.Graphics.Application App, Deswik.Scheduler.Engine.Schedule Schedule, StringBuilder Out). Schedule may be null. Write results with Out.AppendLine(...). C# 5 ONLY (no $\""\"" interpolation, no ?. , no nameof, no => members, no out var). The user sees the code and approves it; it is also saved to the Scripts folder."",
+  ""description"": ""Write and run C# inside Deswik for anything the other tools can't do: create/modify CAD geometry and layers, bulk analysis, reports, custom schedule edits. You supply the BODY of: object Run(Deswik.Graphics.Application App, Deswik.Scheduler.Engine.Schedule Schedule, StringBuilder Out). Schedule may be null. Write results with Out.AppendLine(...). C# 5 ONLY (no $\""\"" interpolation, no ?. , no nameof, no => members, no out var). Read-only code (modifies=false) runs straight away; code that changes data shows the user an approval window unless they turned on auto-approve. Set modifies honestly. Every script is saved to the Scripts folder."",
   ""input_schema"": { ""type"": ""object"", ""properties"": {
       ""description"": { ""type"": ""string"", ""description"": ""Short title of what the code does."" },
       ""usings"": { ""type"": ""array"", ""items"": { ""type"": ""string"" }, ""description"": ""Extra namespaces, e.g. Deswik.Graphics.Figures"" },
@@ -238,7 +241,7 @@ namespace Kennet.DeswikClaude
                 string text;
                 switch (name)
                 {
-                    case "get_deswik_guide": text = SystemPrompt.Text; break;
+                    case "get_deswik_guide": text = SystemPrompt.Full; break;
                     case "get_context": text = GetContext(); break;
                     case "list_layers": text = ListLayers(Str(input, "contains"), Int(input, "max", 300)); break;
                     case "get_selection": text = GetSelection(Int(input, "max", 200)); break;
@@ -620,7 +623,7 @@ namespace Kennet.DeswikClaude
             string shown = "// " + desc + "\n// usings: " + string.Join(", ", usings) + "\n\n" + code;
             Approve((modifies ? "Run code that CHANGES your data: " : "Run read-only code: ") + desc,
                     modifies ? "This code modifies the drawing or schedule. Save first if you want a restore point." : "Claude says this code only reads data.",
-                    shown, "Run code");
+                    shown, "Run code", modifies);
 
             string saved = "";
             try { saved = CodeRunner.SaveScript(desc, code, usings); } catch { }
@@ -630,8 +633,9 @@ namespace Kennet.DeswikClaude
         }
 
         // ===================================================================================== helpers
-        private void Approve(string title, string summary, string details, string approveText = "Approve")
+        private void Approve(string title, string summary, string details, string approveText = "Approve", bool changes = true)
         {
+            if (_settings != null && (changes ? _settings.AutoApproveChanges : _settings.AutoApproveReadOnly)) return;
             if (!ApprovalDialog.Ask(_owner, title, string.IsNullOrWhiteSpace(summary) ? title : summary, details, approveText))
                 throw new DeclinedException();
         }

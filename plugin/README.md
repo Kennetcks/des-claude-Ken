@@ -1,4 +1,4 @@
-# Claude Assistant for Deswik CAD 2024.2 (v0.2)
+# Claude Assistant for Deswik CAD 2024.2 (v0.3)
 
 Lets Claude work on your open Deswik drawing and Interactive Scheduler (IS) schedule. There are two ways to chat:
 
@@ -10,7 +10,7 @@ In both cases, **every change pops up an approval window inside Deswik first.**
 ---
 
 ## 1. Install the Deswik plugin (needed for both)
-1. Copy `bin\Kennet.DeswikClaude.dll` to a folder, e.g. `C:\DeswikPlugins\`. **Don't rename it.**
+1. Build the DLL (see *Build from source*; it lands in `src\bin\Release\`) and copy `Kennet.DeswikClaude.dll` to a folder, e.g. `C:\DeswikPlugins\`. **Don't rename it.**
 2. **Unblock it:** right-click the DLL > Properties > tick **Unblock** > OK. Or run in PowerShell:
    `Get-ChildItem C:\DeswikPlugins -Recurse | Unblock-File`
    Without this, Plugin Manager says "does not have a valid Deswik.CAD load and unload interface".
@@ -19,7 +19,7 @@ In both cases, **every change pops up an approval window inside Deswik first.**
 
 ## 2A. Connect the Claude desktop app
 1. In the Claude desktop app: **Settings > Extensions > Advanced settings > Install Extension…**
-2. Choose `claude-app-extension\deswik-claude.mcpb` and confirm.
+2. Choose `deswik-claude.mcpb` (pack it from `claude-app-extension\src` with `npx @anthropic-ai/mcpb pack`) and confirm.
 3. Start a new chat. Under the **+** button > Connectors, *Deswik CAD (Claude Assistant)* should be listed and switched on.
 4. Try: *"Use the Deswik tools: what's loaded in my Deswik session?"*
 5. When Claude wants to change something, Deswik's approval window jumps to the front. Approve or cancel it there.
@@ -44,8 +44,16 @@ Click **API key…** in the panel and paste a key from https://console.anthropic
 ## How the link works
 The Claude app runs a small Node.js bridge (inside the .mcpb). The bridge talks to the plugin over the local named pipe `\\.\pipe\KennetDeswikClaude`. Only your Windows user can connect, and network access to the pipe is denied. Nothing leaves your PC except what Claude normally sees in your chat.
 
+## Shared guides
+`get_deswik_guide` returns the built-in API guide followed by the shared guides from the repo's `knowledge\` folder, which are embedded in the DLL at build time. Extra or updated guides can go in `%AppData%\Kennet.DeswikClaude\Knowledge\*.md` (same file name replaces the built-in one); restart Deswik to pick them up. The **Guides** button opens that folder.
+
+## Approvals
+- **Auto-run reads** (on by default): read-only tools and code marked `modifies=false` run without the approval window.
+- **Auto-approve changes** (off by default): changes run without the approval window. Save often if you turn it on.
+Both are checkboxes in the panel and are stored in `settings.json`.
+
 ## Build from source
-`src\DeswikClaude.csproj` (Visual Studio, .NET Framework 4.7.2; set `<DeswikDir>` if Deswik is elsewhere).
+`src\DeswikClaude.csproj` (Visual Studio, .NET Framework 4.7.2; set `<DeswikDir>` if Deswik is elsewhere). Build from a full clone of the repo so `..\..\knowledge\*.md` is found.
 Extension source: `claude-app-extension\src`. Repack with `npx @anthropic-ai/mcpb pack`.
 
 ## Safety

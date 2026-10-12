@@ -17,7 +17,7 @@ namespace Kennet.DeswikClaude
 
         // ---- Properties read by the Deswik plugin host -----------------------------------------
         public string ProductName { get { return "Claude Assistant"; } }
-        public string ProductVersion { get { return "0.2.0"; } }
+        public string ProductVersion { get { return "0.3.0"; } }
         public string DockStyle { get { return "Tab"; } }
         public string DockPosition { get { return "Right"; } }
         public bool AllowFloating { get { return true; } }

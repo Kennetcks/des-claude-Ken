@@ -47,5 +47,11 @@
     <Compile Include="SystemPrompt.cs" />
     <Compile Include="McpPipeServer.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Shared guides from the repo's knowledge folder, served by get_deswik_guide -->
+    <EmbeddedResource Include="..\..\knowledge\*.md">
+      <LogicalName>Knowledge.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

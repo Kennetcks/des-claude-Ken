@@ -5,8 +5,10 @@ Shared knowledge for the **Claude Assistant for Deswik CAD** plugin (Kennet.Desw
 - `knowledge/` — guides Claude should read before working in Deswik: rules the engineer settled on, API details verified in Deswik 2024.2, and pitfalls.
 - `scripts/` — working `run_csharp` examples behind those guides.
 
-## Using it with the plugin
-At the start of a Deswik conversation, give Claude the files in `knowledge/` (or point it at this repository) along with `get_deswik_guide`. The plugin's built-in guide covers the general API; these files add the task-specific rules.
+- `plugin/` — source of the Deswik plugin (C#) and the Claude desktop app extension. See [plugin/README.md](plugin/README.md) to install and build.
+
+## How the plugin uses it
+From v0.3.0 the plugin builds every file in `knowledge/` into its DLL, and `get_deswik_guide` (and the panel chat) returns them after the built-in API guide. So a fresh install already knows them. To add or try a guide without rebuilding, drop a `.md` file in `%AppData%\Kennet.DeswikClaude\Knowledge` and restart Deswik; a file there replaces the built-in one with the same name. The **Guides** button in the panel opens that folder.
 
 | Guide | Covers |
 |---|---|

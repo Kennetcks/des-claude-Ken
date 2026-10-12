@@ -112,7 +112,7 @@ namespace Kennet.DeswikClaude
                 ["system"] = new JArray(new JObject
                 {
                     ["type"] = "text",
-                    ["text"] = SystemPrompt.Text,
+                    ["text"] = SystemPrompt.Full,
                     ["cache_control"] = new JObject { ["type"] = "ephemeral" }
                 }),
                 ["tools"] = _toolDefs,
