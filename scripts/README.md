@@ -30,3 +30,4 @@ They were written for one drawing, so check the layer names at the top of each s
 `decline-design/` is a separate Python set (numpy, scipy, lxml) that builds a decline and levels as a .dcf outside Deswik; see its `README.txt`.
 
 See `../knowledge/` for the rules behind them.
+| stope-design/whole-mine | study-existing-stopes-read-only.cs, export-*.cs, raster.py, design.py, run_all.py, virtual.py, run_virtual.py, post.py, make_geom.py, create-blocks-mine.cs, interrogate-blocks-mine.cs, write-grades-blocks-mine.cs | 5 m blocks along every drive in the mine (>1.5 g/t only), trial ore drives for unreached ore. See knowledge/stope-design.md. |

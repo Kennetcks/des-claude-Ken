@@ -59,3 +59,40 @@ Kennet rejected v1 of the blocks: through the low-grade stretch (blocks 13–20)
 
 ## Etiquette in the user's drawing
 - Don't change layer visibility in bulk. "Display all layers" means Deswik's display of the ticked layers, not ticking every layer. Turning on all 600+ layers froze Deswik for minutes. Record the visible layers before any change and restore exactly those.
+
+## 5 m blocks for the whole mine
+Kennet's follow-up (2026-10-12): run the 5 m blocks for every ore drive, judge where else stopes belong, and **only create blocks above 1.5 g/t**. A block may be shorter than full height when that pays, **never taller**. He combines the blocks into stopes himself. Scripts: `scripts/stope-design/whole-mine/`.
+
+**Learn from the existing stopes first** (`study-existing-stopes-read-only.cs`). At the mine, 214 of the 218 `LH_Stope` task solids sit on an OD. `Stope Height` is 17.5 m from the back on 22 m levels, so the top is the floor of the drive above. That gave the cap: **≤ 17.5 m above the back, and never into a drive overhead**. LEVEL = floor RL − 6000. The lodes are W, G and H, taken from the stope names.
+
+**Pipeline** (whole mine ~10 min):
+1. `export-floor-strings-and-stopes-read-only.cs`: floor strings plus the existing stope meshes.
+2. `export-corridor-cells-read-only.cs`: one pass over all 55 M model records.
+   - Read with `Delegate.CreateDelegate` on `GetDoubleValue(string,long)` and `GetLongValue`, about 0.5 µs per read, 36 s in total.
+   - It writes the sub-blocks in the parent cells within 12 m of every lateral non-decline string, from the floor −2 to +28 m. That is 6.4 M cells, as float32 binary.
+   - It also writes every ≥ 2.5 g/t cell outside those parent cells.
+3. Move the files to the container: the device work folder → `device_stage_files`.
+4. `raster.py`: puts the sub-blocks on a 0.5 × 1.25 × 0.625 m raster inside the parent cells, so lookups are vectorised.
+5. `run_all.py` / `design.py`: one job per drive, with 4 processes. Drives skipped: DEC, SMP, EWD, SUB, PST, DSP.
+   - Sample a grid in drive coordinates, with U ±14 m.
+   - Optimise the windows per station and level.
+   - Fit the walls with a **non-increasing (isotonic) step fit** per wall, so the section stays convex, with steps ≤ the 55° limit and ≤ 1 m change between 5 m sections.
+   - Nudge each wall point with a local evaluation over the two neighbouring blocks only.
+   - Lower the top in 2.5 m bands while the top band is below 2.5 g/t, to a minimum height of 7.5 m.
+   - Keep a block only if its diluted grade is > 1.5.
+6. `virtual.py` + `run_virtual.py`: ore that no drive reaches (about [tonnes removed] here, mostly lode above or below the designed levels).
+   - Cluster the ore into pockets.
+   - On the nearest OD's 22 m level series, draw a trial OD line through the ore centroid every 5 m along strike.
+   - Export the model around those lines (`export-trial-drive-cells-read-only.cs`), then design blocks along them.
+7. `post.py`: priority order is OD blocks, then other drives (ACC/MLA/RAD/ISP), then trial drives.
+   - Drop a block when it overlaps already-kept blocks by more than 25% (1 m voxels), or sits within 15 m of the decline.
+   - `IN_PLAN_PCT` = the share of the block inside the existing stopes (point-in-mesh voxels).
+8. `make_geom.py` → `create-blocks-mine.cs`, which puts the blocks on `5M BLOCKS MINE\{ORE DRIVES, OTHER DRIVES, NO DRIVE}` with the trial lines.
+9. `interrogate-blocks-mine.cs` → `write-grades-blocks-mine.cs` writes the INT_ fields and applies the '5m blocks AU' legend. Then remove the blocks that interrogate at ≤ 1.5 g/t.
+
+**Checks to report.** Ore capture is the share of the ≥ 2.5 g/t ore inside the current stopes that falls inside the blocks.
+- With straight walls (base to top) and U ±8 m, only **66%** was captured, because wide lodes (11–15 m stopes) were missed.
+- After the isotonic convex fit and U ±14 m, **80%**.
+- Deswik's interrogation matched the Python estimate within 0.3%.
+
+Result 2026-10-12: 2,535 blocks, [figure removed]. OD [figure removed], other drives [figure removed], trial drives [figure removed].
