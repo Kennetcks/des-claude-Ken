@@ -124,3 +124,11 @@ Kennet (2026-10-12) on v2: "it looks much better" but asked for these changes. T
 Kennet (2026-10-12) first asked for vertical splits (v3), then corrected himself: "you need to split the solids horizontally, I made a mistake". v4 is the same as v3 except that the one cut is by height: every 2.5 m, both pieces at least 5 m, one piece above the other. Together the two pieces always fill the full column, from floor to floor or 22 m. The split looks for a piece above 2.6 g/t first, and above 2.0 g/t only when no cut gives that and the block is below 2.0. `SPLIT` is `HEIGHT 2.6` or `HEIGHT 2.0`, and `BASE_ABOVE_FLOOR` gives the upper piece's base. The blocks are on `...\STOPE DESIGN\5M BLOCKS MINE V4`, and V2 and V3 are kept. Scripts: `design4.py`, `run_all4.py`, `run_virtual4.py`, `post4.py`, `make_geom4.py`, `*-v4.cs`.
 
 Result: 4,756 blocks, [figure removed]. Below 2: 2,132 blocks, [figure removed]. 2–2.6: 859 blocks, [figure removed]. Above 2.6: 1,765 blocks, [figure removed]. 1,763 split pieces. 14 bend solids were rebuilt as hulls.
+
+## 5 m blocks v5 (also split ore blocks with a low-grade end): current rules
+Kennet (2026-10-12) on v4: "you need to be smart sometimes". A block can be above 2.6 g/t over its full height while its top (or bottom) section is below 2. Split it anyway, "even though the whole block is still above the cut-off", so the high-grade and low-grade sections show as separate blocks. v5 is v4 plus this rule:
+- **Ore blocks too.** A block at or above 2.6 g/t gets one horizontal cut when one piece is above 2.6 and the other is below 2.0. The cut is chosen to maximise tonnes × (grade − 2.6) of the high piece, and `SPLIT` is `HEIGHT 2.6 LOW<2`.
+
+The blocks are on `...\STOPE DESIGN\5M BLOCKS MINE V5`, and V2 to V4 are kept. Scripts: `design5.py`, `run_all5.py`, `run_virtual5.py`, `post5.py`, `make_geom5.py`, `*-v5.cs`.
+
+Result: 4,910 blocks, [figure removed]. Below 2: 2,276 blocks, [figure removed]. 2–2.6: 864 blocks, [figure removed]. Above 2.6: 1,770 blocks, [figure removed]. 305 ore blocks were split into high and low: [figure removed] versus [figure removed].
