@@ -1,7 +1,8 @@
 """Share of the >= 2.6 g/t (unmined) ore in the exported model that sits inside the kept blocks' 1 m voxels."""
 import sys, pickle, numpy as np
 from raster import PX,PY,PZ,NX,NY,NZ,SX,SY,SZ,RX,RY,RZ
-comp=np.load('v_comp.npy'); TD=np.load('v_td.npy',mmap_mode='r'); AU=np.load('v_au.npy',mmap_mode='r'); MN=np.load('v_mn.npy',mmap_mode='r')
+import os; P=os.environ.get('PRE','v')
+comp=np.load(P+'_comp.npy'); TD=np.load(P+'_td.npy',mmap_mode='r'); AU=np.load(P+'_au.npy',mmap_mode='r'); MN=np.load(P+'_mn.npy',mmap_mode='r')
 sel=np.nonzero((np.asarray(AU)>=2.6)&(np.asarray(TD)>0)&(np.asarray(MN)==0))[0]
 inv=np.full(comp.max()+1,-1,np.int64); pidx=np.nonzero(comp>=0)[0]; inv[comp[pidx]]=pidx
 c=sel//(RX*RY*RZ); r=sel%(RX*RY*RZ); si=r//(RY*RZ); sj=(r//RZ)%RY; sk=r%RZ
