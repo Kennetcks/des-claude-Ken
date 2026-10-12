@@ -17,6 +17,9 @@ They were written for one drawing, so check the layer names at the top of each s
 | tunnels-by-rule | measure-profiles-read-only.cs | Measures width/height per ACT_TYPE from existing task solids. |
 | tunnels-by-rule | build-sections-and-rules.cs | Creates arch/circle sections and a refreshable tunnels-by-rule solids layer. |
 | tunnels-by-rule | test-refresh.cs | Refreshes the rule layer twice and checks the count is stable. |
+| interrogation | read-block-model-fields-read-only.cs | Lists a .gmdlb block model's fields. |
+| interrogation | batch-interrogate-solids-to-csv.cs | Batch interrogation of each solid (AU mass-weighted, model density) to a CSV. |
+| interrogation | write-interrogation-attributes.cs | Writes tonnes, volumes, density and AU from that CSV onto the solids, with layer fields. |
 
 `decline-design/` is a separate Python set (numpy, scipy, lxml) that builds a decline and levels as a .dcf outside Deswik; see its `README.txt`.
 
