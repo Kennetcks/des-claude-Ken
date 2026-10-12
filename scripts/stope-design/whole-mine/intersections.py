@@ -3,7 +3,8 @@ comes in between them), the gap between the two end blocks has no solid. Fill it
 end faces (full height, same as the blocks). Usage: python3 intersections.py kept_in.pkl kept_out.pkl"""
 import sys, pickle, collections, numpy as np
 from scipy.spatial import ConvexHull, Delaunay
-sys.path.insert(0,'/home/claude/work'); import design6 as design
+sys.path.insert(0,'/home/claude/work'); import design8 as design
+from overlap_check import overlap
 from raster import Model
 ORIGIN=design.ORIGIN; NL2=2*design.NL; GAP=(0.5,12.0)
 kept=pickle.load(open(sys.argv[1],'rb')); M=Model('n'); S=design.load_strings()
@@ -44,7 +45,12 @@ for L,i,j in sorted(cand):
     vox=np.unique((np.floor(rel[:,0]).astype(np.int64)*2000+np.floor(rel[:,1]).astype(np.int64))*2000+np.floor(rel[:,2]).astype(np.int64))
     pid=a['pid']+'/'+b['pid']
     ov=sum(claimed.get(v,a['pid']) not in (a['pid'],b['pid']) for v in vox.tolist())/len(vox)
-    if ov>0.25: why['overlaps another block']+=1; continue
+    cand_b=dict(V=V.tolist(),F=F)
+    lo_,hi_=V.min(0),V.max(0); hit=0.0
+    for o in kept+new:   # v8: an intersection may not overlap any block, its own end blocks included
+        Vo=np.asarray(o['V'])
+        if np.all(Vo.max(0)>lo_) and np.all(Vo.min(0)<hi_): hit+=overlap(cand_b,o)
+    if hit>=0.5: why['overlaps another block']+=1; continue
     dacc=np.min(np.linalg.norm((acc_ends-c)*[1,1,0.3],axis=1)) if len(acc_ends) else 99
     t=float(w.sum()); gg=float((w*au).sum()/t) if t>0 else 0.0
     ref=a['parts'][0]
