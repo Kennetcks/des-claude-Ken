@@ -19,6 +19,8 @@ From v0.3.0 the plugin builds every file in `knowledge/` into its DLL, and `get_
 | [block-model-interrogation.md](knowledge/block-model-interrogation.md) | Batch interrogating solids against a block model for grade and tonnes; API, gotchas, what to report |
 | [stope-design.md](knowledge/stope-design.md) | Stopes along an ore drive from a block model: the engineer's rules, how existing stopes look, the method, reading a `.gmdlb` block model, loading layers |
 | [task-solids.md](knowledge/task-solids.md) | Task solid attributes and geometry notes, working style |
+| [mine-design-standards.md](knowledge/mine-design-standards.md) | Reference design values from site guidelines in the engineer's library (Site A, Site B, Site C, Site D, Site E): profiles, gradients, fillets, equipment, standoffs, vertical development, stope limits, D&B basics, sequencing |
+| [deswik-design-practice.md](knowledge/deswik-design-practice.md) | How sites organise design in Deswik: master layers and versions, centreline attributes and naming, polyline direction, walls and fillets, stripping, solids and derived tasks, plan content and HOLD/STOP controls |
 
 ## Adding to it
 When something new is learned in a session (a rule the user settled on, an API call that works, a pitfall), add it to the matching file in `knowledge/` and keep it general: no drawing-specific handles.
