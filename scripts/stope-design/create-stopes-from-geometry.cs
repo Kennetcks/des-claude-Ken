@@ -1,7 +1,7 @@
 // Create stope solids from design_stopes.py output and tag them like the existing LH_Stope task solids
 // Body of: object Run(Deswik.Graphics.Application App, Deswik.Scheduler.Engine.Schedule Schedule, StringBuilder Out)
 // Usings: 
-// Paste the stV/stF lines from geom.cs below. Each stope: 4 vertices per 1 m section, triangles with 1-based indices.
+// Paste the stV/stF lines from geom.cs below. Each stope: one ring of 2*NL wall points per section (FW bottom->top, HW top->bottom), triangles with 1-based indices.
 
 string LAY="0\\06 SITE\\03 ENGINEERING\\DESIGN MASTER\\STOPES\\STOPE DESIGN";
 var stV=new List<double[]>(); var stF=new List<int[]>();

@@ -11,17 +11,22 @@ How stopes were designed along an ore drive in a 2026-10 session (the mine, Desw
 
 ## What existing stopes look like (check before designing)
 - On `SCHEDULER\TASK SOLIDS` with `ACT_TYPE=LH_Stope` and `STO_DEV=STO`. Fields: Stope Height / Length / Thickness, STOPE TYPE, LEVEL, DRIVE NUMBER, DIRECTION. The names look like `G210 S100 -55`.
+- Combined/optimised stopes have a section every 5 m with only top and bottom wall points. Kennet wants more points on the walls, kept smooth.
 - The base is at the back of the lower ore drive and the top is at the floor of the drive above. `Stope Height` is measured from the back (17.5 m on 22 m levels). The lengths are 10–50 m (median 35 m) and the thicknesses 2.1–15 m (median 2.8 m).
 - Check that no drive sits inside the planned stope height before building it.
 
 ## Method
 1. **Find the drive.** "298ID" meant the drive solid whose `INT_ID` was 298, set by an earlier batch interrogation. Read the drive's floor string (one per drive, matched by `DIS Parent ID`).
 2. **Export the blocks** around the drive with `scripts/stope-design/export-blocks-around-drive-read-only.cs`. It took ~10 s for 0.4 M sub-blocks out of 55 M.
-3. **Design** with `scripts/stope-design/design_stopes.py`:
-   - Cut the drive into 1 m slices.
-   - In each slice, find the lateral extent of the ≥ cut-off ore in a lower and an upper band, smooth it over 5 m, and keep the width at least the minimum.
-   - Keep the base inside the drive width.
-   - Choose the stope chainages that maximise metal with each stope above the grade limit, staying inside the main ≥ cut-off run. Without that limit, the optimiser stretches a stope into low-grade tail just to add tonnes.
+3. **Design** with `scripts/stope-design/design_stopes.py` (v2, the version Kennet asked for after reviewing v1):
+   - Sample the model on a 0.5 × 0.25 × 0.5 m grid in drive coordinates.
+   - Give each wall **5 points up its height**, not just top and bottom.
+   - At each 1 m station and level, place the walls where they maximise Σ tonnes × (grade − cut-off). That takes in whole ≥ cut-off blocks, including high-grade blocks beside the core, and stops at waste. Keep the width at least the minimum and the base inside the drive.
+   - Smooth along strike (5 m) and up the wall.
+   - Pick the chainages that maximise metal with each stope above the grade limit, staying inside the main ≥ cut-off run. Without that limit, the optimiser stretches a stope into low-grade tail just to add tonnes.
+   - Put a section every 5 m (like the existing stopes) and nudge each wall point 0.25 m out where the added strip is ≥ cut-off, or in where it is below. Keep neighbouring points within 1 m of each other so the walls stay smooth.
+   - Report how much of the ≥ cut-off tonnes near the drive ends up inside: 96–97% here.
+   - **v1 lesson:** shaping on the mean grade of a 7 m band, with only top and bottom wall points, left high-grade blocks outside. Kennet caught it on a section view.
 4. **Build** the solids with `create-stopes-from-geometry.cs`. It makes a `new Polyface()` with `AddVertex(x,y,z)` and `AddTriangle(i,j,k)` (1-based indices), sets `pf.Layer`, and calls `App.ModelSpace.Entities.AddItem(pf,null,null,true,false)`. Check `pf.IsClosed` and `pf.Volume`, and add the layer attribute fields first.
 5. **Interrogate** with `scripts/interrogation/batch-interrogate-solids-to-csv.cs`, with density from the model field. Write the INT_ fields onto the stopes. The Deswik numbers matched the Python estimate within 1%.
 6. **Report** each stope's length, width, tonnes and grade, the grade after the drive overlap is cut, and why any stope is shorter than the maximum. Leave saving the drawing to the user.

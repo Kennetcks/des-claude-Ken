@@ -1,27 +1,28 @@
-"""Design long-hole stopes along one ore drive from exported block model cells.
+"""Design long-hole stopes along one ore drive from exported block model cells (v2 method).
 
-Inputs (exported by export-blocks-around-drive-read-only.cs):
-  blocks.csv        x,y,z,dx,dy,dz,au,dens,domain,mined  (sub-blocks around the drive)
+Inputs (from export-blocks-around-drive-read-only.cs):
+  blocks.csv        x,y,z,dx,dy,dz,au,dens,domain,mined
   floor_string.csv  x,y,z of the drive's floor string
-Output:
-  geom.cs           stV/stF arrays to paste into create-stopes-from-geometry.cs
-Rules used in the 2026-10 session (change at the top):
-  ore = blocks >= CUT g/t; stope walls follow the ore, never narrower than MIN_W;
-  base BASE_BELOW_BACK m below the drive back (inside the drive, cut later);
-  top = back + HEIGHT; each stope <= MAX_L long, PILLAR m between stopes;
-  each stope's diluted grade (all blocks inside) > MIN_GRADE.
-Run: python3 -I design_stopes.py <folder with the csv files>
+Output: geom.cs with stV/stF arrays for create-stopes-from-geometry.cs
+Method (Kennet, 2026-10):
+  1. Sample the model on a 0.5 x 0.25 x 0.5 m grid in drive coordinates (chainage s, offset u, z).
+  2. Each wall has NL points up its height. For every 1 m station and level, pick the offsets that
+     maximise sum(tonnes * (grade - CUT)) with width >= MIN_W, so whole >= CUT blocks are taken in.
+     The base level stays inside the drive.
+  3. Smooth along strike and up the wall, then pick the chainages that maximise metal with every stope
+     > MIN_GRADE, <= MAX_L long, PILLAR m apart, inside the main >= CUT run.
+  4. Use a section every SEC m (like the existing stopes), then nudge each wall point 0.25 m out if
+     the added strip is >= CUT, or in if the removed strip is < CUT, keeping neighbours within 1 m.
+Run: python3 -I design_stopes.py <folder>
 """
 import sys, collections, numpy as np
 D = sys.argv[1].rstrip('/') + '/'
-# --- rules and site values ---------------------------------------------------
-CUT, MIN_GRADE, MIN_W, MAX_L, PILLAR, N_STOPES = 2.5, 2.6, 2.2, 40, 5, 2
-FLOOR, DRIVE_H, DRIVE_W = None, 4.5, 4.5    # FLOOR None = median floor-string z
-HEIGHT, BASE_BELOW_BACK = 20.0, 1.0
-ORIGIN, PARENT = (7770, 62610, 5930), (4, 10, 10)   # block model origin and parent block size
-# -----------------------------------------------------------------------------
-b = np.genfromtxt(D + 'blocks.csv', delimiter=',', skip_header=1, usecols=range(8))
-fs = np.genfromtxt(D + 'floor_string.csv', delimiter=',', skip_header=1)
+CUT, MIN_GRADE, MIN_W, MAX_L, PILLAR = 2.5, 2.6, 2.2, 40, 5
+DRIVE_H, DRIVE_W, HEIGHT, BASE_BELOW_BACK = 4.5, 4.5, 20.0, 1.0
+NL, SEC, SMOOTH_S, MAX_STEP = 5, 5.0, 5, 1.0
+ORIGIN, PARENT = (7770, 62610, 5930), (4, 10, 10)
+b = np.genfromtxt(D+'blocks.csv', delimiter=',', skip_header=1, usecols=range(8))
+fs = np.genfromtxt(D+'floor_string.csv', delimiter=',', skip_header=1)
 OX, OY, OZ = ORIGIN; PX, PY, PZ = PARENT
 cells = collections.defaultdict(list)
 for n, r in enumerate(b): cells[(int((r[0]-OX)//PX), int((r[1]-OY)//PY), int((r[2]-OZ)//PZ))].append(n)
@@ -31,67 +32,92 @@ def look(x, y, z):
         if abs(x-r[0]) <= r[3]/2 and abs(y-r[1]) <= r[4]/2 and abs(z-r[2]) <= r[5]/2: return n
     return -1
 P = fs[:, :2]; seg = np.diff(P, axis=0); L = np.hypot(seg[:, 0], seg[:, 1]); cum = np.r_[0, np.cumsum(L)]
-def frame(s):                      # point, along-strike unit vector, left normal at chainage s
+def frame(s):
     s = min(max(s, 1e-3), cum[-1]-1e-3); i = min(np.searchsorted(cum, s, side='right')-1, len(L)-1)
-    d = seg[i]/L[i]; return P[i] + (s-cum[i])/L[i]*seg[i], d, np.array([-d[1], d[0]])
-floor = float(np.median(fs[:, 2])) if FLOOR is None else FLOOR
-ZB = floor + DRIVE_H - BASE_BELOW_BACK; ZT = floor + DRIVE_H + HEIGHT; ZM = (ZB+ZT)/2
-S = np.arange(0, int(cum[-1])) + 0.5          # 1 m slices
-def extent(s, z0, z1):
-    p, d, nrm = frame(s); us = [u for u in np.arange(-5, 5.01, 0.25)
-        if np.mean([b[look(*(p+u*nrm), z), 6] for z in np.arange(z0+0.5, z1, 1.0)]) >= CUT]
-    return (min(us), max(us)) if us else None
-def series(z0, z1):
-    e = [extent(s, z0, z1) for s in S]
-    c = np.array([np.nan if x is None else (x[0]+x[1])/2 for x in e]); w = np.array([0 if x is None else x[1]-x[0]+0.25 for x in e])
-    ok = ~np.isnan(c); c = np.interp(np.arange(len(c)), np.where(ok)[0], c[ok]); k = np.ones(5)/5
-    sm = lambda a: np.convolve(np.pad(a, 2, mode='edge'), k, 'valid')
-    return sm(c), np.maximum(sm(w), MIN_W), ok
-cB, wB, okB = series(ZB, ZM); cT, wT, okT = series(ZM, ZT)
-cB = np.clip(cB, -DRIVE_W/2 + wB/2, DRIVE_W/2 - wB/2)        # base stays inside the drive
-shape = lambda s: [np.interp(s, S, a) for a in (cB, wB, cT, wT)]
-def sample(s0, s1, keep=lambda z, g: True):
-    t = m = 0
-    for s in np.arange(s0+0.25, s1, 0.5):
-        p, d, nrm = frame(s); c0, w0, c1, w1 = shape(s)
-        for z in np.arange(ZB+0.25, ZT, 0.5):
-            f = (z-ZB)/(ZT-ZB); c = c0+(c1-c0)*f; w = w0+(w1-w0)*f
-            for u in np.linspace(c-w/2, c+w/2, 9)[:-1] + w/16:
-                k = look(*(p+u*nrm), z)
-                if k >= 0 and keep(z, b[k, 6]): tt = 0.5*0.5*w/8*b[k, 7]; t += tt; m += tt*b[k, 6]
-    return t, m
-TM = np.array([sample(s-0.5, s+0.5) for s in S]); cT_ = np.r_[0, np.cumsum(TM[:, 0])]; cM_ = np.r_[0, np.cumsum(TM[:, 1])]
-g = lambda i, j: (cM_[j]-cM_[i])/(cT_[j]-cT_[i])
-ore = np.where(okB | okT)[0]                                  # stopes stay inside the main >= CUT run (gaps <= 5 m)
+    d = seg[i]/L[i]; return P[i]+(s-cum[i])/L[i]*seg[i], np.array([-d[1], d[0]])
+floor = float(np.median(fs[:, 2])); ZB = floor+DRIVE_H-BASE_BELOW_BACK; ZT = floor+DRIVE_H+HEIGHT; LZ = np.linspace(ZB, ZT, NL)
+# 1. grid
+Sg = np.arange(0.25, cum[-1], 0.5); Ug = np.arange(-8+0.125, 8, 0.25); Zg = np.arange(ZB+0.25, ZT, 0.5)
+T = np.zeros((len(Sg), len(Ug), len(Zg))); G = np.zeros_like(T)
+for a, s in enumerate(Sg):
+    p, nrm = frame(s)
+    for c, u in enumerate(Ug):
+        x, y = p+u*nrm
+        for e, z in enumerate(Zg):
+            k = look(x, y, z)
+            if k >= 0: T[a, c, e] = 0.0625*b[k, 7]; G[a, c, e] = b[k, 6]
+V = T*(G-CUT); nmin = int(np.ceil(MIN_W/0.25)); inside = np.abs(Ug) <= DRIVE_W/2
+# 2. walls per 1 m station
+S1 = np.arange(0.5, Sg[-1], 1.0); FW = np.zeros((len(S1), NL)); HW = np.zeros_like(FW)
+for a, s in enumerate(S1):
+    for l, z in enumerate(LZ):
+        prof = V[np.abs(Sg-s) <= 2.5][:, :, np.abs(Zg-z) <= (ZT-ZB)/(NL-1)/2+0.1].sum(axis=(0, 2))
+        if l == 0: prof = np.where(inside, prof, -1e9)
+        cs = np.r_[0, np.cumsum(prof)]
+        _, i, j = max((cs[j]-cs[i], i, j) for i in range(len(Ug)) for j in range(i+nmin, len(Ug)+1))
+        FW[a, l] = Ug[i]-0.125; HW[a, l] = Ug[j-1]+0.125
+def smooth(A, k):
+    B = np.array([np.convolve(np.pad(A[:, l], k//2, mode='edge'), np.ones(k)/k, 'valid') for l in range(A.shape[1])]).T
+    C = B.copy(); C[:, 1:-1] = (B[:, :-2]+2*B[:, 1:-1]+B[:, 2:])/4; return C
+def fix(FW, HW):
+    c = (HW+FW)/2; m = HW-FW < MIN_W; FW[m] = c[m]-MIN_W/2; HW[m] = c[m]+MIN_W/2
+    sh = np.maximum(HW[:, 0]-DRIVE_W/2, 0)-np.maximum(-DRIVE_W/2-FW[:, 0], 0); FW[:, 0] -= sh; HW[:, 0] -= sh
+FW = smooth(FW, SMOOTH_S); HW = smooth(HW, SMOOTH_S); fix(FW, HW)
+def evaluate(ss, fw, hw):
+    sm = (Sg > ss[0]) & (Sg < ss[-1]); S = Sg[sm]
+    f = np.array([np.interp(S, ss, fw[:, q]) for q in range(NL)]); h = np.array([np.interp(S, ss, hw[:, q]) for q in range(NL)])
+    f = np.array([[np.interp(z, LZ, f[:, a]) for z in Zg] for a in range(len(S))]); h = np.array([[np.interp(z, LZ, h[:, a]) for z in Zg] for a in range(len(S))])
+    m = (Ug[None, :, None] >= f[:, None, :]) & (Ug[None, :, None] <= h[:, None, :]); t = T[sm]*m
+    return t.sum(), (t*G[sm]).sum()
+# 3. chainages (two stopes)
+TM = np.array([evaluate(np.array([s-0.5, s+0.5]), np.array([FW[a], FW[a]]), np.array([HW[a], HW[a]])) for a, s in enumerate(S1)])
+cT = np.r_[0, np.cumsum(TM[:, 0])]; cM = np.r_[0, np.cumsum(TM[:, 1])]; g = lambda i, j: (cM[j]-cM[i])/max(cT[j]-cT[i], 1e-9)
+ore = np.where((G >= CUT).any(axis=(1, 2)))[0]; ore = np.unique((Sg[ore]//1).astype(int))
 runs = [[ore[0]]]
-for q in ore[1:]:
-    (runs[-1].append(q) if q - runs[-1][-1] <= 5 else runs.append([q]))
-run = max(runs, key=lambda r: cM_[r[-1]+1]-cM_[r[0]]); S0, E = run[0], run[-1]+1
-best = None                                                    # two stopes, max metal (extend the loop for N_STOPES>2)
+for q in ore[1:]: (runs[-1].append(q) if q-runs[-1][-1] <= 5 else runs.append([q]))
+run = max(runs, key=lambda r: cM[min(r[-1]+1, len(S1))]-cM[r[0]]); S0, E = run[0], min(run[-1]+1, len(S1))
+best = None
 for i in range(S0, E):
     for j in range(i+10, min(E, i+MAX_L)+1):
         if g(i, j) <= MIN_GRADE: continue
-        k = j + PILLAR
+        k = j+PILLAR
         for l in range(k+10, min(E, k+MAX_L)+1):
-            if g(k, l) > MIN_GRADE and (best is None or cM_[j]-cM_[i]+cM_[l]-cM_[k] > best[0]): best = (cM_[j]-cM_[i]+cM_[l]-cM_[k], i, j, k, l)
+            v = cM[j]-cM[i]+cM[l]-cM[k]
+            if g(k, l) > MIN_GRADE and (best is None or v > best[0]): best = (v, i, j, k, l)
 _, i, j, k, l = best
-def solid(a, c):
-    V, F = [], []; secs = np.arange(a, c+1e-3, 1.0)
-    for s in secs:
-        p, d, nrm = frame(s); c0, w0, c1, w1 = shape(s)
-        for u, z in ((c0-w0/2, ZB), (c0+w0/2, ZB), (c1+w1/2, ZT), (c1-w1/2, ZT)): V.append((*(p+u*nrm), z))
-    n = len(secs)
-    for q in range(n-1):
-        for e in range(4):
-            a0 = 4*q+e; a1 = 4*q+(e+1) % 4; F += [(a0, a1, a1+4), (a0, a1+4, a0+4)]
-    e = 4*(n-1); F += [(0, 2, 1), (0, 3, 2), (e, e+1, e+2), (e, e+2, e+3)]
-    V = np.array(V); vol = sum(np.dot(V[x], np.cross(V[y], V[z])) for x, y, z in F)/6
-    if vol < 0: F = [(x, z, y) for x, y, z in F]
-    return V, F, abs(vol)
-cs = ''
+# 4. sections every SEC m, nudge wall points
+cs_out = ''
 for a, c in ((i, j), (k, l)):
-    V, F, vol = solid(a, c); t, m = sample(a, c); ta, ma = sample(a, c, lambda z, gr: z > floor+DRIVE_H); tg, mg = sample(a, c, lambda z, gr: gr >= CUT)
-    print('chainage %d-%d L %d m: %.0f m3, %.0f t @ %.2f g/t | above back %.2f g/t | >=%.1f part %.0f t @ %.2f' % (a, c, c-a, vol, t, m/t, ma/ta, CUT, tg, mg/tg))
-    cs += 'stV.Add(new double[]{' + ','.join('%.3f' % x for v in V for x in v) + '});\n'
-    cs += 'stF.Add(new int[]{' + ','.join(str(x+1) for f in F for x in f) + '});\n'
-open(D + 'geom.cs', 'w').write(cs)
+    ss = np.array(list(np.arange(a, c, SEC))+[c], float)
+    fw = np.array([[np.interp(s, S1, FW[:, q]) for q in range(NL)] for s in ss]); hw = np.array([[np.interp(s, S1, HW[:, q]) for q in range(NL)] for s in ss])
+    t0, m0 = evaluate(ss, fw, hw)
+    for _ in range(12):
+        changed = 0
+        for si in range(len(ss)):
+            for q in range(NL):
+                for A, sign in ((fw, -1), (hw, 1)):
+                    for step in (0.25, -0.25):
+                        old = A[si, q]; A[si, q] = old+sign*step
+                        ok = hw[si, q]-fw[si, q] >= MIN_W-1e-9 and (q > 0 or (fw[si, 0] >= -DRIVE_W/2-1e-9 and hw[si, 0] <= DRIVE_W/2+1e-9))
+                        ok = ok and all(abs(A[si, q]-v) <= MAX_STEP for v in [A[x, q] for x in (si-1, si+1) if 0 <= x < len(ss)]+[A[si, y] for y in (q-1, q+1) if 0 <= y < NL])
+                        if ok:
+                            t1, m1 = evaluate(ss, fw, hw); dt, dm = t1-t0, m1-m0
+                            if (step > 0 and dt > 0 and dm/dt >= CUT) or (step < 0 and dt < 0 and dm/dt < CUT): t0, m0 = t1, m1; changed += 1; continue
+                        A[si, q] = old
+        if not changed: break
+    Vx, F = [], []; R = 2*NL
+    for si, s in enumerate(ss):
+        p, nrm = frame(s)
+        for u, z in [(fw[si, q], LZ[q]) for q in range(NL)]+[(hw[si, q], LZ[q]) for q in range(NL-1, -1, -1)]: Vx.append((*(p+u*nrm), z))
+    n = len(ss)
+    for q in range(n-1):
+        for e in range(R): a0 = R*q+e; a1 = R*q+(e+1) % R; F += [(a0, a1, a1+R), (a0, a1+R, a0+R)]
+    for base, flip in ((0, True), (R*(n-1), False)):
+        for q in range(NL-1):
+            tri = [(base+q, base+q+1, base+R-2-q), (base+q, base+R-2-q, base+R-1-q)]
+            F += [(x, z, y) for x, y, z in tri] if flip else tri
+    Vx = np.array(Vx)
+    if sum(np.dot(Vx[x], np.cross(Vx[y], Vx[z])) for x, y, z in F) < 0: F = [(x, z, y) for x, y, z in F]
+    print('chainage %d-%d (%d m): %.0f t @ %.2f g/t, width %.2f-%.2f m' % (a, c, c-a, t0, m0/t0, (hw-fw).min(), (hw-fw).max()))
+    cs_out += 'stV.Add(new double[]{'+','.join('%.3f' % x for v in Vx for x in v)+'});\n'+'stF.Add(new int[]{'+','.join(str(x+1) for f in F for x in f)+'});\n'
+open(D+'geom.cs', 'w').write(cs_out)

@@ -21,7 +21,7 @@ They were written for one drawing, so check the layer names at the top of each s
 | interrogation | batch-interrogate-solids-to-csv.cs | Batch interrogation of each solid (AU mass-weighted, model density) to a CSV. |
 | interrogation | write-interrogation-attributes.cs | Writes tonnes, volumes, density and AU from that CSV onto the solids, with layer fields. |
 | stope-design | export-blocks-around-drive-read-only.cs | Exports the block model sub-blocks in a box around a drive, plus its floor string, to CSV. |
-| stope-design | design_stopes.py | Python (numpy): shapes the stopes on the ≥ cut-off ore, picks the chainages (max length, pillar, grade limit) and writes the solid geometry. |
+| stope-design | design_stopes.py | Python (numpy): shapes the walls (5 points up each wall, a section every 5 m) to take in the ≥ cut-off blocks, picks the chainages (max length, pillar, grade limit) and writes the solid geometry. |
 | stope-design | create-stopes-from-geometry.cs | Builds closed Polyface stopes from that geometry and tags them like LH_Stope task solids. |
 
 `decline-design/` is a separate Python set (numpy, scipy, lxml) that builds a decline and levels as a .dcf outside Deswik; see its `README.txt`.
