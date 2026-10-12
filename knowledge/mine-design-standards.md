@@ -119,7 +119,7 @@ Shape rules: follow the economic ore boundary but keep it mineable and smooth; n
 
 Brows and drawpoints: no brow inside an intersection; brows square to the drive; drawpoints not in paste. For remote bogging the loader must be straight before the brow: ≥ 19 m straight from the FWD to the final drawpoint (5 m rill + loader + 3 m). Paste walls 5–6 m from the final drawpoint, ≥ 3 m from intersections.
 
-Drill and blast guide (Site A): burden 2.2–2.5 m / spacing 2.6–3.0 m for 89 mm (102 mm: 2.2–3.2 / 2.8–4.0); max hole 20 m (89 mm) / 35 m (102 mm); ring dump ≤ 30°; powder factor 0.35–0.45 kg/t rings, 0.7–1.0 slot; ~12 t per drill metre rings, 7.5 slot (Site E scheduling default 3.5 t/m overall); target void ratio 0.95. Each firing needs a free face and enough void; slot in the tallest / widest part.
+Drill and blast guide (Site A): burden 2.2–2.5 m / spacing 2.6–3.0 m for 89 mm (102 mm: 2.2–3.2 / 2.8–4.0); max hole 20 m (89 mm) / 35 m (102 mm); ring dump ≤ 30°; powder factor 0.35–0.45 kg/t rings, 0.7–1.0 slot; ~12 t per drill metre rings, 7.5 slot (Site E scheduling default 3.5 t/m overall); target void ratio 0.95. Each firing needs a free face and enough void; slot in the tallest / widest part. More D&B detail in [drill-and-blast-design.md](drill-and-blast-design.md); fill rules in [backfill-and-paste.md](backfill-and-paste.md).
 
 Sequencing: paste-filled longitudinal top-down with a two-stope lead (45° front); rockfill longitudinal bottom-up with a two-stope lead; transverse paste stopes centre-out chevron with a 1–2 stope lead between levels.
 
@@ -134,4 +134,5 @@ Dilution and recovery (scheduling defaults, Site E): development 95 % recovery /
 - Magazines connected to return air and away from both egress routes.
 - Remote stockpiles ≤ 200–250 m from the stope.
 - Breakthroughs: two HOLD lines ≥ 24 m apart on converging headings; pick up both, then one HOLD becomes a STOP. Don't break through at a turnout (fillets need a second firing). Breaking into a rise needs a risk assessment.
+- Ventilation (WA regs, Site B manual): ≥ 0.05 m³/s per kW of diesel, ≥ 2.5 m³/s minimum in a working place; wet bulb > 25 °C needs ≥ 0.5 m/s air velocity, target < 28 °C, close the area at 30 °C, no work above 32 °C; DPM limit 0.071 mg/m³. Size vent rises ≥ 24–25 m² and keep the fresh / return separation in the design.
 - Design changes / expiry (Site A): designs older than 6 months, new voids within 20 m, new holes within 10 m, pillars below 1:1, or a new breakthrough make it a high-risk change needing full review.
