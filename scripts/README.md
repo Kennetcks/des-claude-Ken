@@ -18,4 +18,6 @@ They were written for one drawing, so check the layer names at the top of each s
 | tunnels-by-rule | build-sections-and-rules.cs | Creates arch/circle sections and a refreshable tunnels-by-rule solids layer. |
 | tunnels-by-rule | test-refresh.cs | Refreshes the rule layer twice and checks the count is stable. |
 
+`decline-design/` is a separate Python set (numpy, scipy, lxml) that builds a decline and levels as a .dcf outside Deswik; see its `README.txt`.
+
 See `../knowledge/` for the rules behind them.
