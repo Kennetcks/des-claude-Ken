@@ -33,12 +33,20 @@ How stopes were designed along an ore drive in a 2026-10 session (the mine, Desw
 
 ## 5 m blocks along a whole drive (engineer picks stopes and pillars)
 Kennet's follow-up request: instead of finished stopes, cut the whole drive into 5 m blocks whose walls follow the lode, grade each block, and colour them by grade so he can choose the stopes and put pillars where grade is lower.
-1. `blocks_along_drive.py <folder> 4 2.5 0.15` uses the same wall shaping as v3, but over the full drive length and with no stope grade limit. It writes one closed solid per 5 m (neighbours share their end section; a remainder under 2.5 m joins the last block) to `blocks_5m_geometry.txt`, plus a Python estimate in `blocks.txt`.
+1. `blocks_along_drive.py <folder> 4 2.5 0.15` uses the v3 wall shaping over the full drive with no stope grade limit, then makes every section drillable (below). It writes one closed solid per 5 m (neighbours share their end section; a remainder under 2.5 m joins the last block) to `blocks_5m_geometry.txt`, plus a Python estimate in `blocks.txt`.
 2. `create-blocks-from-geometry.cs` builds them on `STOPE DESIGN\5M BLOCKS`, named `G410 S100 B01..`, with LH_Stope tags plus `BLOCK`, `CH_FROM`, `CH_TO`.
 3. Interrogate with `batch-interrogate-solids-to-csv.cs` (set LAY to the blocks layer). The CSV carries the figure attributes, so match rows by `BLOCK`.
-4. `write-grades-and-grade-legend.cs` writes the INT_ fields, builds a range legend on `INT_AU` and applies it to the layer: ≥2.6 blue (0,0,255), 2–2.6 light blue (0,176,255), 1–2 green and 0–1 grey from the drawing's `AU` legend. Legend item `From`/`To` are strings; clone the AU legend's last item for an open-ended top band.
-5. 298ID result: 33 blocks, [tonnes removed]. Ch 0–65 is ore (2.0–7.8 g/t), ch 65–115 is below 1.3 g/t, ch 115–120 is 2.2 g/t, then 0.4–1.8 g/t. The Deswik grades matched the Python estimate within about 3%.
+4. `write-grades-and-grade-legend.cs` writes the INT_ fields, builds a range legend on `INT_AU` and applies it to the layer. Kennet's bands: 0–1 grey, 1–2 green, 2–2.6 light blue (0,176,255), 2.6–3 blue, 3–5 red, 5–12 strong pink (255,0,255, he likes it), 12+ purple. Legend item `From`/`To` are strings; clone the AU legend's last item for an open-ended top band.
+5. 298ID result (v2, drillable): 33 blocks, [tonnes removed]. Ch 0–65 is ore (2.2–8.2 g/t), ch 65–115 is below 1.2 g/t, ch 115–120 is 2.2 g/t, then 0.4–1.8 g/t.
 - Kennet called the layer "2m blocks" while asking for 5 m blocks; I named it `5M BLOCKS` and said so.
+
+### Drillability: the rods don't bend
+Kennet rejected v1 of the blocks: through the low-grade stretch (blocks 13–20) the walls bent, with the top swinging up to 9 m sideways, which a longhole rig can't drill. Cause: where no window is economic, maximising Σ t × (g − cut-off) picks the emptiest window at each level, so the walls chase scraps. Rules now applied to every section (also use them for stopes):
+- Holes are straight lines fanned from the rig in the drive, so each section must be **convex**: each wall's outward step per level may stay the same or shrink going up, never grow (no wall bending back in, no S-bends). A convex section with the base inside the drive is reachable from the collar.
+- Each wall segment dips at least **55°** (footwall ≥ 50°, 55° preferred, so broken ore runs; `mine-design-standards.md`).
+- Each wall point moves at most **1 m between neighbouring sections** (5 m apart).
+- Where no window is economic, place the minimum-width window on the most metal (follow the lode trend), not on the least loss.
+- Start from straight walls (base to top), then only nudge points where the section stays drillable. On 298ID the walls ended up straight; metal in ch 0–65 fell about 5% against the bent v1.
 
 ## Reading a Deswik `.gmdlb` block model from run_csharp
 - Open it with `new Deswik.BlockModel.ManagedGeoModels.BlockModel(path)`, then call `Load(ModelOpenState.OpenForReadNotIndexed, CancellationToken.None)`. Its `BlockGeoModel` property is a `Deswik.GeoModel.BlockModel`. Calling `Deswik.GeoModel.BlockModel.Open(...)` directly returned null. Dispose the wrapper when finished.

@@ -5,7 +5,7 @@
 string LAY="0\\06 SITE\\03 ENGINEERING\\DESIGN MASTER\\STOPES\\STOPE DESIGN\\5M BLOCKS";
 string src=@"C:\Users\User\AppData\Roaming\Kennet.DeswikClaude\work\stopes298\blocks_5m_geometry.txt";
 string PREFIX="G410 S100 B", LEVEL="410", DRIVE="100";
-string DESIGN="5 m block along G410 OD S100 (INT_ID 298), walls follow >=2.5 g/t lode, base 1 m inside OD";
+string DESIGN="5 m block v2 (drillable: straight convex walls >=55 deg, <=1 m change per section) along G410 OD S100 (INT_ID 298), base 1 m inside OD";
 var inv=System.Globalization.CultureInfo.InvariantCulture;
 var lines=File.ReadAllLines(src).Where(x=>x.Trim()!="").ToArray();
 Deswik.Graphics.Primaries.Layer ly=null; foreach (Deswik.Graphics.Primaries.Layer l in App.Layers) if(l.Name==LAY) ly=l;

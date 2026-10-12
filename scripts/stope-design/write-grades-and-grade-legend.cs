@@ -27,12 +27,16 @@ foreach (Deswik.Graphics.Primaries.Figure f in App.ModelSpace.Entities) {
   figs.Add(f);
   res.Add(string.Format(inv,"{0},{1},{2},{3:0},{4:0.00}", row[iName], row[hdr.IndexOf("CH_FROM")], row[hdr.IndexOf("CH_TO")], double.Parse(row[hdr.IndexOf("Model Tons")],inv), double.Parse(row[hdr.IndexOf("AU")],inv)));
 }
-// bands Kennet asked for: blue >= 2.6, light blue 2-2.6; below 2 uses colours from the existing AU legend
+// bands Kennet asked for: light blue 2-2.6, blue 2.6-3, then 3-5, 5-12 strong pink, 12+;
+// below 2 and the high-grade colours come from the drawing's AU / Grade Bins legends
 var bands = new object[][]{
   new object[]{0.0, 1.0, "0 to 1", System.Drawing.Color.FromArgb(128,128,128)},
   new object[]{1.0, 2.0, "1 to 2", System.Drawing.Color.FromArgb(0,255,0)},
   new object[]{2.0, 2.6, "2 to 2.6", System.Drawing.Color.FromArgb(0,176,255)},
-  new object[]{2.6, 1000.0, "2.6 to", System.Drawing.Color.FromArgb(0,0,255)} };
+  new object[]{2.6, 3.0, "2.6 to 3", System.Drawing.Color.FromArgb(0,0,255)},
+  new object[]{3.0, 5.0, "3 to 5", System.Drawing.Color.FromArgb(255,0,0)},
+  new object[]{5.0, 12.0, "5 to 12", System.Drawing.Color.FromArgb(255,0,255)},
+  new object[]{12.0, 1000.0, "12 to", System.Drawing.Color.FromArgb(128,0,128)} };
 var au=App.Legends.Find("AU");
 Deswik.Common.Core.Legends.LegendItem tmpl=null, last=null; foreach (Deswik.Common.Core.Legends.LegendItem it in au) { if (tmpl==null) tmpl=it; last=it; }
 var lg=App.Legends.Find(LEG); if (lg==null) lg=App.Legends.Add(LEG,au.Filters,au.GlobalConstants);

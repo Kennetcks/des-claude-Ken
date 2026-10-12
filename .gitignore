@@ -2,3 +2,4 @@ bin/
 obj/
 *.user
 *.mcpb
+__pycache__/
