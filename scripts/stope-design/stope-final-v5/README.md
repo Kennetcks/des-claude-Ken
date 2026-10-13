@@ -26,3 +26,14 @@ With SHAPE_REF=3.0 the result was [figure removed] (python estimate), fewer ounc
 
 Gotcha: a stope that is watertight in trimesh can still come out of Deswik as Volume=-1, and RepairAlternate does not
 fix it. Round-trip it through manifold3d `Manifold(mesh).simplify(0.05)` and recreate it.
+
+## V5B: lean with the lode (2026-10-13)
+
+Kennet on 3CA56D4 (ST101 3CA0D17 S05): V5 capped the centre lean at 1.2 m per level, but that lode leans about 2.4 m per
+level (~66 deg). From ch 140 the top half fell off the lode, so the stope came out 10 m high @ 3.96 where V4 had 26 m @ 4.55.
+v10e lets the dip line lean up to the MIN_DIP (50 deg) drillable limit per station. 3CA0D17 S04 is now full height,
+[figure removed] INT.
+Layer STOPE FINAL V5B: 157 stopes [figure removed] INT = [ounces removed]; [gold removed] above 2.6. That beats V4 ([ounces removed], 976 kg)
+on both. 5 stopes <= 2.5 were deleted. `all.sh` runs the whole chain.
+The ore drive strings (STOPE FINAL V5B\ORE DRIVES, 77 strings, 5.1 km, no solids) are drawn centred under the stope floors
+at the lowest floor RL, >= 1 m past the end stopes. Kennet asked for strings only this time; the solids can come later.

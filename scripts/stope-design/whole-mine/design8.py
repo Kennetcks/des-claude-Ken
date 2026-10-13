@@ -174,10 +174,10 @@ def run(job):
         # metal above cut-off of the whole column, t*(g-2.5); along strike the centre drifts <= 0.75 m per m (Viterbi). A wide
         # span that only pays in one band no longer drags the walls off the higher-grade lode below/above it.
         from scipy.ndimage import maximum_filter1d
-        # v10d: the centre follows a straight dip line up the column (c0 + d*level, |d| <= 1.2 m per level) so the section stays
+        # v10d: the centre follows a straight dip line up the column (c0 + d*level, |d| up to the MIN_DIP limit, v10e) so the section stays
         # one coherent lode, and the Viterbi state is (centre, width): the width may change one step per m along strike only.
         WS=[MIN_W,3.0,4.0,5.5,7.5,10.0,14.0]; nA=len(S1); nU=len(UG); nW=len(WS)
-        DIPS=np.linspace(-1.2,1.2,9)
+        DIPS=np.arange(-4.5,4.51,0.3)   # v10e (Kennet 2026-10-13, 3CA0D17): lean per level up to the 50 deg drillable limit, not 1.2 m
         BEST=np.full((nA,nW,nU),-1e9); DARG=np.zeros((nA,nW,nU),int)
         for a,s0 in enumerate(S1):
             sm=np.abs(Sg-s0)<=2.5; H=np.median(Htop[sm])
@@ -193,6 +193,7 @@ def run(job):
                     for l in range(NL):
                         sh=int(round(d*l/DU)); idx=np.arange(nU)+sh; ok=(idx>=0)&(idx<nU)
                         tot[di]+=np.where(ok,VL[l][np.clip(idx,0,nU-1)],-1e9)
+                tot[np.abs(DIPS)>H/(NL-1)/np.tan(np.radians(MIN_DIP))+1e-6]=-1e12
                 DARG[a,wi]=tot.argmax(0); BEST[a,wi]=tot.max(0)
         if BEST.max()>0:
             # Viterbi on 5 m bins (the section spacing): centre moves <= MAX_STEP and width one step per bin, the same
