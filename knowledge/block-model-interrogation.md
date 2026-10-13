@@ -52,3 +52,5 @@ ib.Execute();
 - Report total tonnes and grade, the split by ACT_TYPE, how much is above a cut-off, and the void volume. Deliver the per-solid CSV.
 
 See `scripts/interrogation/`.
+
+- **Deswik 2026.1:** `InterrogationRules+ModelToInterrogate` no longer takes `App.CommonSettings`; its only constructor takes an `ICommonCadApplicationMethods`. Pass `Activator.CreateInstance(asm.GetType("Deswik.Graphics.Commands.CommonCadApplicationMethods"), new object[]{App, null})`. The rest of the batch setup is unchanged (checked 2026-10-13, 24 stopes, density 2.84-2.94).
