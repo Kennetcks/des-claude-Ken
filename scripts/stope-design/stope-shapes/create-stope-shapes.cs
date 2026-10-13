@@ -3,7 +3,7 @@
 // Body of: object Run(Deswik.Graphics.Application App, Deswik.Scheduler.Engine.Schedule Schedule, StringBuilder Out)
 var inv=System.Globalization.CultureInfo.InvariantCulture;
 string dir=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),"Kennet.DeswikClaude","work","stopes_mine");
-string LAY="DESIGN\\CREATING PLILLAR/STOPES\\5M BLOCKS\\STOPE SHAPES";
+string LAY="DESIGN\\CREATING PLILLAR/STOPES\\5M BLOCKS\\STOPE SHAPES V2"; // v1 kept on ...\\STOPE SHAPES
 Deswik.Graphics.Primaries.Layer ly=null; foreach (Deswik.Graphics.Primaries.Layer l in App.Layers) if(l.Name==LAY&&!l.Deleted) ly=l;
 if(ly==null){ App.Layers.Add(LAY,false,1); foreach (Deswik.Graphics.Primaries.Layer l in App.Layers) if(l.Name==LAY&&!l.Deleted) ly=l; }
 int have0=0; foreach (var e in ly.Entities){ var f=e as Deswik.Graphics.Primaries.Figure; if(f!=null&&!f.Deleted) have0++; }

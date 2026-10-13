@@ -198,3 +198,9 @@ Method (`scripts/stope-design/stope-shapes`):
 
 First result: 115 stopes, [figure removed] (INT), none below 2.5, 16 with chamfers, median 35 m. Python estimate vs Deswik INT_AU within +-0.03 g/t typically.
 Gotcha: GROUP comes from the blocks as they are in the drawing; Kennet re-grouped some (group H appeared).
+
+### Stope shapes v2 (Kennet's review, 2026-10-13) - current, layer 5M BLOCKS\STOPE SHAPES V2 (v1 kept)
+- A chamfered end goes straight up 5 m from the floor first, then leans max 40 deg off vertical (he settled on 40 after first saying 37 and 45). Grid mask: foot at end+d for z<5, line from (end+d, 5) to (end, top) above. Solids: pieces split at floor+5, lower part cut by the vertical plane at the foot, upper part by the inclined plane.
+- Every stope keeps >= 3 m along the floor at full stope height (between the chamfer feet, on columns at the stope's max top) - rejects stopes that are almost all chamfer.
+- Pillars: "pillar means money lost" - put them in the lowest-grade sections when possible. The DP maximises metal above 2.4 in stopes, which is the same as leaving the least metal in pillars.
+- Result: 116 stopes [figure removed] INT, none < 2.5, 16 chamfered (max 36.8 deg), median 33 m. Between stopes (pillars + low-grade gaps): 59 gaps, [figure removed]. 89 of 116 solids needed RepairAlternate.

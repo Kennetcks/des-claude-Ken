@@ -3,7 +3,7 @@
 
 var asm = typeof(Deswik.Graphics.Application).Assembly;
 string bm = @"C:\path\to\BLOCK_MODEL.gmdlb";
-string LAY="DESIGN\\CREATING PLILLAR/STOPES\\5M BLOCKS\\STOPE SHAPES";
+string LAY="DESIGN\\CREATING PLILLAR/STOPES\\5M BLOCKS\\STOPE SHAPES V2"; // v1 kept on ...\\STOPE SHAPES
 string csv = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),"Kennet.DeswikClaude","work","stopes_mine","interrogation_stope_shapes.csv");
 if (File.Exists(csv)) File.Delete(csv);
 var mtT = asm.GetType("Deswik.Graphics.Interrogation.InterrogationRules+ModelToInterrogate");

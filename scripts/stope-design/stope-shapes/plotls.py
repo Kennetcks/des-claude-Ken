@@ -12,9 +12,9 @@ def draw(ax,k):
         i,j=s['i'],s['j']; dL,dR=s['dL'],s['dR']
         top={i+q:h for q,h in enumerate(s['tops'])}
         sL=cols[i]['s0']; sR=cols[j]['s1']
-        pts=[(sL+dL,0),(sR-dR,0),(sR,top[j])]
+        pts=[(sL+dL,0),(sR-dR,0)]+([(sR-dR,5)] if dR>0 else [])+[(sR,top[j])]
         for q in range(j,i-1,-1): pts+= [(cols[q]['s1'],top[q]),(cols[q]['s0'],top[q])]
-        pts+=[(sL,top[i])]
+        pts+=[(sL,top[i])]+([(sL+dL,5)] if dL>0 else [])
         ax.add_patch(Polygon(pts,closed=True,fill=False,ec='r',lw=1.8))
         ax.text((sL+sR)/2,1,'%.0fm\n%.0ft\n%.2f'%(s['L'],s['t'],s['g']),ha='center',fontsize=6)
     ax.set_xlim(cols[0]['s0']-2,cols[-1]['s1']+2); ax.set_ylim(-1,max(c['H'] for c in cols)+1); ax.set_title(k,fontsize=8); ax.set_aspect('equal')

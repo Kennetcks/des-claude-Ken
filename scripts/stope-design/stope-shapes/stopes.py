@@ -1,6 +1,6 @@
 import numpy as np, collections, math, re, json, pickle, sys
 from bio import load
-CUT=2.4; AVG=2.5; LMAX=50.0; LPREF=40.0; LMIN=10.0; PIL=5.0; TANA=math.tan(math.radians(37)); DS=0.5; DZ=0.5; DSTEP=2.5; TMIN=1500
+CUT=2.4; AVG=2.5; LMAX=50.0; LPREF=40.0; LMIN=10.0; PIL=5.0; TANA=math.tan(math.radians(40)); ZV=5.0; FULLW=3.0; DS=0.5; DZ=0.5; DSTEP=2.5; TMIN=1500
 B=load()
 drives=collections.defaultdict(list)
 for b in B: drives[b['drive']].append(b)
@@ -38,8 +38,9 @@ def mask(gr,cols,i,j,tops,dL,dR):
     tp=np.zeros(len(sc)); tp[insc]=np.array(tops)[colof[insc]-i]
     M=insc[:,None]&(zc[None,:]<tp[:,None]-1e-6)
     ztL=tops[0]; ztR=tops[-1]
-    if dL>0: M&= sc[:,None] >= sL+dL*(1-zc[None,:]/ztL)
-    if dR>0: M&= sc[:,None] <= sR-dR*(1-zc[None,:]/ztR)
+    Z=zc[None,:]
+    if dL>0: M&= sc[:,None] >= sL+dL*np.clip(1-(Z-ZV)/(ztL-ZV),0,1)
+    if dR>0: M&= sc[:,None] <= sR-dR*np.clip(1-(Z-ZV)/(ztR-ZV),0,1)
     return M
 
 def evalm(gr,M,cut):
@@ -86,17 +87,24 @@ def best_tops(gr,cols,i,j,dL,dR,cut):
     o=best[1]
     return [Hs[c] if opts[o[c]] is None else opts[o[c]] for c in range(n)]
 
+def fullok(cols,i,j,tops,dL,dR):
+    # Kennet: at least 3 m along the floor that goes straight from floor to the back (full stope height)
+    a=cols[i]['s0']+dL; b=cols[j]['s1']-dR; H=max(tops); w=0.0
+    for k in range(i,j+1):
+        if tops[k-i]>=H-0.01: w+=max(0.0,min(b,cols[k]['s1'])-max(a,cols[k]['s0']))
+    return w>=FULLW-1e-6
+
 def best_shape(gr,cols,i,j,cut):
     length=cols[j]['s1']-cols[i]['s0']
     dL=dR=0.0
     for it in range(2):
         tops=best_tops(gr,cols,i,j,dL,dR,cut)
         for side in (1,2):
-            zt=tops[0] if side==1 else tops[-1]; dmax=TANA*zt if zt>=12.5 else 0.0
+            zt=tops[0] if side==1 else tops[-1]; dmax=TANA*(zt-ZV) if zt>=12.5 else 0.0
             bv=None
             for d in np.arange(0,dmax+1e-6,DSTEP):
                 a,b=(d,dR) if side==1 else (dL,d)
-                if a+b>length-DS: continue
+                if a+b>length-DS or not fullok(cols,i,j,tops,a,b): continue
                 t,g,v=evalm(gr,mask(gr,cols,i,j,tops,a,b),cut)
                 if bv is None or v>bv[0]+1e-9: bv=(v,float(d))
             if side==1: dL=bv[1]

@@ -1,7 +1,7 @@
 // Stope shapes: write interrogation grades (INT_*) onto the stope shapes, colour them with Kennet's '5m blocks AU v2' legend (applied, never edited), export stope_shapes_grades.csv
 // Body of: object Run(Deswik.Graphics.Application App, Deswik.Scheduler.Engine.Schedule Schedule, StringBuilder Out)
 var inv=System.Globalization.CultureInfo.InvariantCulture;
-string LAY="DESIGN\\CREATING PLILLAR/STOPES\\5M BLOCKS\\STOPE SHAPES", LEG="5m blocks AU v2";
+string LAY="DESIGN\\CREATING PLILLAR/STOPES\\5M BLOCKS\\STOPE SHAPES V2", LEG="5m blocks AU v2";
 string dir=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),"Kennet.DeswikClaude","work","stopes_mine");
 var lines=File.ReadAllLines(Path.Combine(dir,"interrogation_stope_shapes.csv"));
 Func<string,List<string>> split = s => { var r=new List<string>(); var sb=new StringBuilder(); bool q=false; foreach (char ch in s){ if(ch=='"'){q=!q;continue;} if(ch==','&&!q){r.Add(sb.ToString());sb.Clear();continue;} sb.Append(ch);} r.Add(sb.ToString()); return r; };

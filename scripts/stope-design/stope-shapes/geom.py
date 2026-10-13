@@ -1,6 +1,6 @@
 import pickle,numpy as np,trimesh,math,collections,json
 from trimesh.intersections import slice_mesh_plane
-from stopes import drives, columns, TANA
+from stopes import drives, columns, TANA, ZV
 res=pickle.load(open('stopes.pkl','rb'))
 def cent(c):
     V=np.vstack([p['mesh'].vertices for p in c['pieces']]); return V[:,:2].mean(0), V[:,2].min()
@@ -39,17 +39,27 @@ for key,(cols,sel) in res.items():
                 if p['base']>=top-0.01: continue
                 m=p['mesh'].copy()
                 if p['base']+p['ht']>top+0.01: m=clip(m,np.array([0,0,-1.0]),np.array([0,0,zf+top]))
+                # chamfer: vertical for ZV m from the floor, then a straight lean to the end top. Split the piece at floor+ZV:
+                # the lower part is cut by the vertical plane at the chamfer foot, the upper part by the inclined plane.
+                chs=[]
                 for side in ('L','R'):
                     d=s['d'+side]
-                    if d<=0 or m is None: continue
+                    if d<=0: continue
                     k=i if side=='L' else j; dv=di if side=='L' else dj; sg=1 if side=='L' else -1
-                    zt=s['tops'][0] if side=='L' else s['tops'][-1]; z0=C[k][1]
-                    e=sL if side=='L' else sR
-                    A=np.r_[P(k,e+sg*d,dv),z0]; Bt=np.r_[P(k,e,dv),z0+zt]; w=np.r_[-dv[1],dv[0],0]
+                    zt=s['tops'][0] if side=='L' else s['tops'][-1]; z0=C[k][1]; e=sL if side=='L' else sR
+                    A=np.r_[P(k,e+sg*d,dv),z0+ZV]; Bt=np.r_[P(k,e,dv),z0+zt]; w=np.r_[-dv[1],dv[0],0]
                     nn=np.cross(Bt-A,w); nn/=np.linalg.norm(nn)
                     if nn@np.r_[sg*dv,0]<0: nn=-nn
-                    m=clip(m,nn,A)
-                if m is not None:
+                    nv=np.r_[sg*dv,0.0]
+                    chs.append((A,nn,nv,z0+ZV))
+                if chs and m is not None and any(((m.vertices-A)@nv).min()<-1e-6 or ((m.vertices-A)@nn).min()<-1e-6 for A,nn,nv,_ in chs):
+                    zs=chs[0][3]
+                    lo=clip(m,np.array([0,0,-1.0]),np.array([0,0,zs])); hi=clip(m,np.array([0,0,1.0]),np.array([0,0,zs]))
+                    for A,nn,nv,_ in chs:
+                        lo=clip(lo,nv,A); hi=clip(hi,nn,A)
+                    ms=[x for x in (lo,hi) if x is not None]
+                else: ms=[m] if m is not None else []
+                for m in ms:
                     dv=dirn(q); V=np.array(m.vertices); c0=V.mean(0)
                     pr=(V[:,:2]-c0[:2])@dv; V[:,:2]+=np.outer(np.sign(pr)*0.05,dv)
                     V[:,2]+=np.sign(V[:,2]-c0[2])*0.05
@@ -59,7 +69,7 @@ for key,(cols,sel) in res.items():
         dens=np.mean([p['dens'] for q in range(i,j+1) for p in cols[q]['pieces']])
         p0=cols[i]['pieces'][0]
         out.append(dict(drive=key,level=p0['level'],group=p0['group'],source=p0['source'],layer=p0['layer'],ch0=sL,ch1=sR,L=sR-sL,H=max(s['tops']),t=s['t'],g=s['g'],dL=s['dL'],dR=s['dR'],
-            angL=math.degrees(math.atan2(s['dL'],s['tops'][0])),angR=math.degrees(math.atan2(s['dR'],s['tops'][-1])),blocks=' '.join(sorted(set(bl))),
+            angL=math.degrees(math.atan2(s['dL'],s['tops'][0]-ZV)),angR=math.degrees(math.atan2(s['dR'],s['tops'][-1]-ZV)),blocks=' '.join(sorted(set(bl))),
             vol=u.volume,estvol=s['t']/dens,watertight=u.is_watertight,V=u.vertices,F=u.faces))
 # intersections >=2.5 as their own stopes
 for key,bl in drives.items():
