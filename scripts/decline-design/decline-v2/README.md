@@ -17,6 +17,7 @@ Run order (work dir holds kd_strings.csv / kd_attrs.csv exported from his layer,
 4. `stage2b_extend_drives.py` - a connector that leaves from the END of one of his ore drives becomes an extension of that drive.
 4b. `stage4_tidy.py` - Kennet's review: straight drives where possible (fewest vertices keeping every stope centre within 2 m, runs >= 8 m,
    junction points kept), no ore drive that serves no stope at a dead end, free ends trimmed to the last stope + 1 m.
+   (d) every ore drive end then runs at least 1 m past the furthest floor point of its last stope solid (Kennet: "it can't finish before the stope"); junction ends move with it.
 5. `stage3_attributes.py` - attributes: LEVEL, LODE (GROUP A/B, nearest drive for new strings), COST_CENTRE O for OD / C otherwise,
    LAT_VERT, STO_DEV, DESIGN notes, Transformation Details; cleans duplicate vertices and backtracks (they stop tunnels-by-rule).
 6. `rebuild-decline-v2.cs` - clears V2, recopies his strings, applies the CSVs, colours by ACT_TYPE, refreshes the solids.

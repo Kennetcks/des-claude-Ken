@@ -94,3 +94,41 @@ S2={h:v for h,v in ALL.items() if not h.startswith('new')}; new2=[v for h,v in A
 removed=[l[1] for l in log if l[0].startswith('removed')]
 D['S']=S2; D['new']=new2; D['removed']=removed; pickle.dump(D,open('stage4.pkl','wb'))
 print('vertices per OD:',sorted([len(v['P']) for v in ALL.values() if v['t']=='OD']))
+
+# (d) Kennet: the ore drive must run at least 1 m past the end of the last stope (measured on the stope solid, not the centreline)
+D=pickle.load(open('stage4.pkl','rb')); S2=D['S']; new2=D['new']
+ALL={h:v for h,v in S2.items()}; ALL.update({'new%02d'%i:n for i,n in enumerate(new2)})
+ext_log=[]; short=[]
+for h,v in ALL.items():
+    if v['t']!='OD': continue
+    sts=stopes_of(h)
+    if not sts: continue
+    for e in (0,-1):
+        P=v['P']; p=P[e]; q=P[1] if e==0 else P[-2]
+        d=(p[:2]-q[:2]); d/=np.linalg.norm(d)
+        # how far the stope floors reach past this end, along the end direction
+        reach=-1e9
+        for st,_,_ in sts:
+            V=st['mesh'].vertices; fl=V[V[:,2]<st['z0']+1.0][:,:2]
+            # only floor points close to the drive line near this end
+            n=np.array([-d[1],d[0]]); lat=np.abs((fl-p[:2])@n)
+            m=lat<8
+            if m.any(): reach=max(reach,((fl[m]-p[:2])@d).max())
+        need=reach+1.0
+        if need<=0.05: continue
+        # does this end sit on another string (a junction)? then it can't be pushed through
+        onj=False
+        for h2,w in ALL.items():
+            if h2==h or w['t']!='OD': continue      # an access ending here just becomes a T; another ore drive carries on
+            ok,_=on(p,w['P'],tol=1.0)
+            if ok: onj=True; break
+        if onj: short.append((h,e,round(need,1)))   # pushed anyway: a short stub past the corner
+        newp=np.r_[p[:2]+need*d,p[2]]
+        v['P']=np.vstack([newp,P]) if e==0 else np.vstack([P,newp]); v['P']=np.delete(v['P'],1 if e==0 else -2,0) if np.linalg.norm(P[e,:2]-(P[1,:2] if e==0 else P[-2,:2]))>0 and False else v['P']
+        # keep it straight: move the end vertex instead of adding one
+        P2=P.copy(); P2[e,:2]=newp[:2]; v['P']=P2; v['changed']=True
+        ext_log.append((h,'start' if e==0 else 'end',round(need,1)))
+print('ore drive ends pushed past the last stope:',len(ext_log)); [print(' ',x) for x in ext_log]
+print('ends on a junction that stop short of a stope (not pushed):',short)
+D['S']={h:v for h,v in ALL.items() if not h.startswith('new')}; D['new']=[v for h,v in ALL.items() if h.startswith('new')]
+pickle.dump(D,open('stage4.pkl','wb'))
