@@ -63,6 +63,8 @@ def inside_cols(V,F,gx,gy,z0,hs):
 # stacked stopes can later be combined into a double lift. HUP = tallest floor-to-floor stope, CEIL_R = plan radius to the
 # string above. Defaults keep the v8 whole-mine behaviour (7 m, max 22 m).
 CEIL_R=float(os.environ.get('CEIL_R','7')); HUP=float(os.environ.get('HUP',str(HMAX)))
+# HBLIND = height of a blind stope (no string above): Kennet 2026-10-13 uses 26 m, ~22 m once the development drive is taken out
+HBLIND=float(os.environ.get('HBLIND',str(HMAX)))
 def overhead_floor(drv, S, back, others):
     """lowest floor of any other drive passing over the stope footprint (|u|<=CEIL_R, 7 m by default) above back+2"""
     p,_,_=drv.frame(S); out=np.full(len(S),np.inf)
@@ -78,10 +80,10 @@ def run(job):
     if drv.len<5: return pid, None, 'short'
     ph=PH.get(act,5.0)
     Sg=np.arange(DS/2, drv.len, DS); p,nrm,fz=drv.frame(Sg); back=fz+ph; ZB=fz.copy()
-    ceil=overhead_floor(drv,Sg,back,others); gap=ceil-ZB; Htop=np.where(gap<=HUP, gap, HMAX)   # floor to floor (up to HUP), else 22 m
+    ceil=overhead_floor(drv,Sg,back,others); gap=ceil-ZB; Htop=np.where(gap<=HUP, gap, HBLIND)   # floor to floor (up to HUP), else blind height (22 m default)
     BT=gap<=HUP+0.5                                                             # breaks through into a drive above
     if np.median(Htop)<HMIN: return pid, None, 'no room'
-    HG=np.arange(DH/2, max(HMAX,HUP), DH); NH=len(HG)
+    HG=np.arange(DH/2, max(HMAX,HUP,HBLIND), DH); NH=len(HG)
     X=p[:,None,None,0]+UG[None,:,None]*nrm[:,None,None,0]; Y=p[:,None,None,1]+UG[None,:,None]*nrm[:,None,None,1]; Z=ZB[:,None,None]+HG[None,None,:]
     X,Y,Z=np.broadcast_arrays(X,Y,Z)
     td,au,mn=M.look(X.ravel(),Y.ravel(),Z.ravel()); sh=(len(Sg),NU,NH)
