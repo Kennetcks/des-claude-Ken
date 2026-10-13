@@ -9,6 +9,35 @@ CUTP=2.6; RAD=50.0; MIN_T=1000
 MODEL=os.environ.get('MODEL','s')  # raster prefix; 's2' adds the target-box cells (Stope Final run)
 # Stope Final (Kennet 2026-10-13): optional TARGET_BOXES json [[x0,y0,z0,x1,y1,z1],...] = areas his ST task-solid stopes reach with no ST string within 50 m; ore inside them counts too
 BOX=np.array(json.load(open(os.environ['TARGET_BOXES']))) if os.environ.get('TARGET_BOXES') else np.zeros((0,6))
+def snap_line(Mo, pts, F, HALF=12.0, DU=0.5):
+    """Kennet 2026-10-13: the ore drive strings can move later, so put each extra string vertex on the centre of the
+    best >= 2.5 g/t lode across it (band F..F+22, +-HALF m, score = metal above 2.5 x exp(-|offset|/10)), then smooth."""
+    p=np.array(pts,float); n=len(p); out=p.copy()
+    U=np.arange(-HALF,HALF+1e-9,DU); Z=np.arange(F+0.3,F+22,0.625); Sx=np.arange(-2.0,2.01,1.0)
+    for i in range(n):
+        a=p[max(i-1,0),:2]; b=p[min(i+1,n-1),:2]; d=b-a; d=d/np.linalg.norm(d); nrm=np.array([-d[1],d[0]])
+        uu,ss,zz=np.meshgrid(U,Sx,Z,indexing='ij')
+        xy=p[i,:2]+uu[...,None]*nrm+ss[...,None]*d
+        td,au,mn=Mo.look(xy[...,0].ravel(),xy[...,1].ravel(),zz.ravel())
+        td=td.reshape(uu.shape); au=au.reshape(uu.shape); mn=mn.reshape(uu.shape)
+        ore=(au>=2.5)&(mn==0); met=(td*np.where(ore,au-2.5,0)).sum(axis=(1,2)); ton=(td*ore).sum(axis=(1,2))
+        runs=[]; cur=None; gap=0
+        for k in range(len(U)):
+            if ton[k]>0:
+                if cur is None: cur=[k,k]
+                else: cur[1]=k
+                gap=0
+            elif cur is not None:
+                gap+=1
+                if gap>2: runs.append(cur); cur=None; gap=0
+        if cur is not None: runs.append(cur)
+        best=None
+        for r0,r1 in runs:
+            mt=met[r0:r1+1].sum(); uc=np.average(U[r0:r1+1],weights=ton[r0:r1+1]+1e-9); sc=mt*np.exp(-abs(uc)/10)
+            if best is None or sc>best[0]: best=(sc,uc)
+        if best and best[0]>0: out[i,:2]=p[i,:2]+best[1]*nrm
+    if n>2: out[1:-1,:2]=(out[:-2,:2]+out[1:-1,:2]+out[2:,:2])/3
+    return out
 if __name__=='__main__':
     S=load_st(); kept=pickle.load(open(W+'kept_st.pkl','rb'))
     comp=np.load(MODEL+'_comp.npy'); TD=np.load(MODEL+'_td.npy',mmap_mode='r'); AU=np.load(MODEL+'_au.npy',mmap_mode='r'); MN=np.load(MODEL+'_mn.npy',mmap_mode='r')
@@ -70,6 +99,10 @@ if __name__=='__main__':
                 a2=np.vstack([e0,a2,e1]); ton=t[mm][np.isin(bins,[pp[0] for pp in rr])].sum()
                 if ton<MIN_T: continue
                 lines.append(dict(pocket=pk,level=float(F+ORIGIN[2]),pts=(np.c_[a2,np.full(len(a2),F)]+ORIGIN).round(2).tolist(),ore_t=float(ton)))
+    from raster import Model as _M; Mo=_M(MODEL); mv=[]
+    for l in lines:
+        p0=np.array(l['pts'])-ORIGIN; p1=snap_line(Mo,p0,p0[0,2]); mv.append(np.hypot(*(p1[:,:2]-p0[:,:2]).T).mean()); l['pts']=(p1+ORIGIN).round(2).tolist()
+    print('snapped extra strings onto the ore: mean move %.1f m, max %.1f m'%(np.mean(mv),np.max(mv)))
     print(len(lines),'extra strings through %.0f t of missed ore'%sum(l['ore_t'] for l in lines))
     json.dump(lines,open(W+'extra_strings.json','w'))
     # design along the extra strings; ST blocks always win

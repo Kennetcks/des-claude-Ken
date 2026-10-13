@@ -10,7 +10,7 @@ import os
 def init(): design.MODEL_PRE=os.environ.get('MODEL','s')
 def load_st():
     S=collections.OrderedDict()
-    for r in csv.DictReader(open('/mnt/user-data/uploads/work/stopes_mine/st_strings.csv')):
+    for r in csv.DictReader(open(os.environ.get('ST_FILE','/mnt/user-data/uploads/work/stopes_mine/st_strings.csv'))):
         S.setdefault(r['pid'],{'pid':r['pid'],'h':r['handle'],'pts':[]})['pts'].append((float(r['x']),float(r['y']),float(r['z'])))
     for v in S.values():
         p=np.array(v['pts'])-ORIGIN; v['pts']=p; L=np.hypot(*np.diff(p[:,:2],axis=0).T).sum(); grad=abs(p[-1,2]-p[0,2])/max(L,1e-6)
