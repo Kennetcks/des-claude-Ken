@@ -4,7 +4,8 @@ import sys, csv, collections, time, pickle, numpy as np, multiprocessing as mp
 sys.path.insert(0,'/home/claude/work'); import design8 as design
 from run_all6 import dens
 from overlap_check import overlap, pairs
-ORIGIN=design.ORIGIN; MINV=0.5; MIN_G=0.5; W='/home/claude/work/st/'
+ORIGIN=design.ORIGIN; MINV=0.5; MIN_G=1.5;   # Kennet 2026-10-13: first 0.5, then 1.5
+W='/home/claude/work/st/'
 def init(): design.MODEL_PRE='s'
 def load_st():
     S=collections.OrderedDict()
@@ -24,7 +25,7 @@ def clean(b_list, pid, dec, lev=None, extra=False):
         c=np.array([b['cx'],b['cy'],b['cz']])-ORIGIN; near=np.abs(dec[:,2]-(c[2]+11))<15
         b['dec_dist']=float(np.hypot(dec[near,0]-c[0],dec[near,1]-c[1]).min()) if near.any() else 999.
         if b['dec_dist']<15: continue
-        if not b['split'] and b['g']<MIN_G: continue   # Kennet 2026-10-13: a block < 0.5 g/t is only kept when it splits into a piece > 2.0 and a lower piece
+        if not b['split'] and b['g']<MIN_G: continue   # Kennet 2026-10-13: a block < MIN_G is only kept when it splits into a piece > 2.0 and a lower piece
         keep.append(b)
     if extra and keep and max(b['g'] for b in keep)<=2.0: return []
     return keep

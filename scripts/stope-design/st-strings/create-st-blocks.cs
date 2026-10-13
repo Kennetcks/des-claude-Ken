@@ -1,23 +1,23 @@
-// ST strings: create the 5 m blocks (st_blocks_geometry.txt from st_geom.py) on DESIGN\CREATING PLILLAR/STOPES\5M BLOCKS\{ST ORE DRIVES, ST ACCESSES, EXTRA STRINGS, INTERSECTIONS} and the extra strings on DESIGN\CREATING PLILLAR/STOPES\EXTRA STRINGS
+// ST strings: create the 5 m blocks (st_blocks_geometry.txt from st_geom.py) on DESIGN\CREATING PLILLAR/STOPES\5M BLOCKS\STOPES (ore drives, accesses and intersections together, Kennet 2026-10-13) and ...\5M BLOCKS\EXTRA STRINGS and the extra strings on DESIGN\CREATING PLILLAR/STOPES\EXTRA STRINGS
 // Body of: object Run(Deswik.Graphics.Application App, Deswik.Scheduler.Engine.Schedule Schedule, StringBuilder Out)
 
 var inv=System.Globalization.CultureInfo.InvariantCulture;
 string dir=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),"Kennet.DeswikClaude","work","stopes_mine");
 string BASE="DESIGN\\CREATING PLILLAR/STOPES\\5M BLOCKS";
-var LAYS=new Dictionary<string,string>{{"ST ORE DRIVE",BASE+"\\ST ORE DRIVES"},{"ST ACCESS",BASE+"\\ST ACCESSES"},{"EXTRA STRING",BASE+"\\EXTRA STRINGS"},{"INTERSECTION",BASE+"\\INTERSECTIONS"}};
+var LAYS=new Dictionary<string,string>{{"ST ORE DRIVE",BASE+"\\STOPES"},{"ST ACCESS",BASE+"\\STOPES"},{"EXTRA STRING",BASE+"\\EXTRA STRINGS"},{"INTERSECTION",BASE+"\\STOPES"}};
 string LINES="DESIGN\\CREATING PLILLAR/STOPES\\EXTRA STRINGS";
 Func<string,Deswik.Graphics.Primaries.Layer> getL=(nm)=>{ Deswik.Graphics.Primaries.Layer r=null; foreach (Deswik.Graphics.Primaries.Layer l in App.Layers) if(l.Name==nm&&!l.Deleted) r=l; if(r==null){ App.Layers.Add(nm,false,1); foreach (Deswik.Graphics.Primaries.Layer l in App.Layers) if(l.Name==nm&&!l.Deleted) r=l; } return r; };
 var lays=new Dictionary<string,Deswik.Graphics.Primaries.Layer>(); foreach (var kv in LAYS) lays[kv.Key]=getL(kv.Value); var ll=getL(LINES);
-foreach (var ly in lays.Values.Concat(new[]{ll})) { int c=0; foreach (var e in ly.Entities){ var f=e as Deswik.Graphics.Primaries.Figure; if(f!=null&&!f.Deleted) c++; } if(c>0){ Out.AppendLine(ly.Name+" already has "+c+" figures, stopping"); return null; } }
+foreach (var ly in lays.Values.Distinct().Concat(new[]{ll})) { int c=0; foreach (var e in ly.Entities){ var f=e as Deswik.Graphics.Primaries.Figure; if(f!=null&&!f.Deleted) c++; } if(c>0){ Out.AppendLine(ly.Name+" already has "+c+" figures, stopping"); return null; } }
 string[] sF={"Name","ACT_TYPE","STO_DEV","LAT_VERT","LODE","LEVEL","DRIVE NUMBER","SOURCE","BLOCK","SPLIT","BREAKTHROUGH","DRILLABLE","DESIGN","INT_ID","INT_MODEL","INT_DATE"};
 string[] dF={"CH_FROM","CH_TO","Stope Height","BASE_ABOVE_FLOOR","Stope Length","Stope Thickness","EST_TONNES","EST_AU","IN_PLAN_PCT","MINED_PCT","DECLINE_DIST","INT_TONNES","INT_AU","INT_VOLUME","INT_VOID_VOLUME","INT_DENSITY"};
-foreach (var ly in lays.Values.Concat(new[]{ll})) {
+foreach (var ly in lays.Values.Distinct().Concat(new[]{ll})) {
   var at=ly.Attributes; var have=new HashSet<string>(); foreach (var a in (System.Collections.IEnumerable)at) have.Add(Convert.ToString(a.GetType().GetProperty("Name").GetValue(a,null)));
   var addM=at.GetType().GetMethods().First(m=>m.Name=="Add"&&m.GetParameters().Length==3&&m.GetParameters()[0].ParameterType==typeof(string)); var aType=addM.GetParameters()[1].ParameterType;
   foreach (var fn in sF) if(!have.Contains(fn)) addM.Invoke(at,new object[]{fn,Enum.Parse(aType,"String"),""});
   foreach (var fn in dF) if(!have.Contains(fn)) addM.Invoke(at,new object[]{fn,Enum.Parse(aType,"Double"),0.0});
 }
-string DESIGN="5 m block on Kennet's ST strings (DESIGN\\CREATING PLILLAR/STOPES\\ST), 2026-10-13, v8 rules: no block overlaps another, close lodes together when the span is > 2.6 g/t else the better lode, full height floor to floor (or 22 m), walls on >=2.5 g/t, drillable (convex, >=50 deg, <=1 m change per 5 m), split by height for a piece > 2.6 then > 2.0, ore drive blocks kept with any grade except blocks below 0.5 g/t that cannot be split into a piece above 2.0 and a lower piece (Kennet 2026-10-13), accesses only > 1.5 g/t, 15 m off the ramp";
+string DESIGN="5 m block on Kennet's ST strings (DESIGN\\CREATING PLILLAR/STOPES\\ST), 2026-10-13, v8 rules: no block overlaps another, close lodes together when the span is > 2.6 g/t else the better lode, full height: a stope under another level goes up to the RL of that level's string (floor to floor, up to 30 m, so stacked stopes can be combined into a double lift), else 22 m, walls on >=2.5 g/t, drillable (convex, >=50 deg, <=1 m change per 5 m), split by height for a piece > 2.6 then > 2.0, blocks below 1.5 g/t not created unless they split into a piece above 2.0 and a lower piece (Kennet 2026-10-13), 15 m off the ramp";
 int nb=0, bad=0; var inval=new List<string>(); var cnt=new Dictionary<string,int>();
 foreach (var line in File.ReadAllLines(Path.Combine(dir,"st_blocks_geometry.txt"))) {
   if (line.Trim()=="") continue; var parts=line.Split('|');

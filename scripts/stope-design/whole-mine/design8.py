@@ -18,7 +18,7 @@ Rules: base 1 m below the drive back, top <= back + HMAX and never above the flo
 walls shaped on >= CUT blocks, sections drillable (convex, >= MIN_DIP, <= 1 m change between 5 m sections),
 top lowered in 2.5 m bands while the top band loses money (min height HMIN), keep a block only if its
 diluted grade > KEEP_G."""
-import sys, csv, json, collections, numpy as np
+import os, sys, csv, json, collections, numpy as np
 from raster import Model
 ORIGIN=np.array([7770.,62610.,5930.])
 CUT, MARG, ORE_SHARE, KEEP_G, SPLIT_G = 2.5, 2.5, 0.15, 1.5, 2.6
@@ -59,12 +59,16 @@ def inside_cols(V,F,gx,gy,z0,hs):
         if not hit.any(): continue
         zt=w1*a[2]+w2*b[2]+w3*c[2]; out[hit]^=((z0[hit,None]+hs[None,:])<zt[hit,None])
     return out
+# Kennet 2026-10-13 (ST strings): a stope under another level goes up to that level's string RL, even past 22 m, so two
+# stacked stopes can later be combined into a double lift. HUP = tallest floor-to-floor stope, CEIL_R = plan radius to the
+# string above. Defaults keep the v8 whole-mine behaviour (7 m, max 22 m).
+CEIL_R=float(os.environ.get('CEIL_R','7')); HUP=float(os.environ.get('HUP',str(HMAX)))
 def overhead_floor(drv, S, back, others):
-    """lowest floor of any other drive passing over the stope footprint (|u|<=7 m) above back+2"""
+    """lowest floor of any other drive passing over the stope footprint (|u|<=CEIL_R, 7 m by default) above back+2"""
     p,_,_=drv.frame(S); out=np.full(len(S),np.inf)
     if len(others)==0: return out
     d=np.hypot(p[:,None,0]-others[None,:,0],p[:,None,1]-others[None,:,1])
-    z=np.where((d<=7.0)&(others[None,:,2]>back[:,None]+2.0),others[None,:,2],np.inf)
+    z=np.where((d<=CEIL_R)&(others[None,:,2]>back[:,None]+2.0),others[None,:,2],np.inf)
     return z.min(axis=1)
 def run(job):
     global M
@@ -74,10 +78,10 @@ def run(job):
     if drv.len<5: return pid, None, 'short'
     ph=PH.get(act,5.0)
     Sg=np.arange(DS/2, drv.len, DS); p,nrm,fz=drv.frame(Sg); back=fz+ph; ZB=fz.copy()
-    ceil=overhead_floor(drv,Sg,back,others); Htop=np.minimum(HMAX, ceil-ZB)   # floor to floor, max 22 m
-    BT=(ceil-ZB)<=HMAX+0.5                                                      # breaks through into a drive above
+    ceil=overhead_floor(drv,Sg,back,others); gap=ceil-ZB; Htop=np.where(gap<=HUP, gap, HMAX)   # floor to floor (up to HUP), else 22 m
+    BT=gap<=HUP+0.5                                                             # breaks through into a drive above
     if np.median(Htop)<HMIN: return pid, None, 'no room'
-    HG=np.arange(DH/2, HMAX, DH); NH=len(HG)
+    HG=np.arange(DH/2, max(HMAX,HUP), DH); NH=len(HG)
     X=p[:,None,None,0]+UG[None,:,None]*nrm[:,None,None,0]; Y=p[:,None,None,1]+UG[None,:,None]*nrm[:,None,None,1]; Z=ZB[:,None,None]+HG[None,None,:]
     X,Y,Z=np.broadcast_arrays(X,Y,Z)
     td,au,mn=M.look(X.ravel(),Y.ravel(),Z.ravel()); sh=(len(Sg),NU,NH)
