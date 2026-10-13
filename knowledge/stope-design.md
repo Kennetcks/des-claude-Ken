@@ -204,3 +204,10 @@ Gotcha: GROUP comes from the blocks as they are in the drawing; Kennet re-groupe
 - Every stope keeps >= 3 m along the floor at full stope height (between the chamfer feet, on columns at the stope's max top) - rejects stopes that are almost all chamfer.
 - Pillars: "pillar means money lost" - put them in the lowest-grade sections when possible. The DP maximises metal above 2.4 in stopes, which is the same as leaving the least metal in pillars.
 - Result: 116 stopes [figure removed] INT, none < 2.5, 16 chamfered (max 36.8 deg), median 33 m. Between stopes (pillars + low-grade gaps): 59 gaps, [figure removed]. 89 of 116 solids needed RepairAlternate.
+
+### Stope Final (2026-10-13) - current, layer DESIGN\CREATING PLILLAR/STOPES\STOPE FINAL
+Kennet compared v2 with his own stopes on SCHEDULER\TASK SOLIDS\ST (that layer holds every LH_Stope solid twice; dedupe by volume + centroid) and asked why v2 had no stopes in some areas his have. Main cause: about [figure removed] sat more than 50 m from any ST string, so no block was ever made there. He asked to add extra strings there and rerun the whole chain (5 m blocks, grades, stopes) on a new layer "Stope Final".
+- Target boxes: bounds of his ST pieces with no ST string nearby, +-5 m (8 boxes). `st_stage2.py` takes them via `TARGET_BOXES=<json>`; ore inside a box counts as if it were within 50 m. The block-model raster must cover the boxes too (export the box cells and build raster `s2` = ST cells + box cells; `MODEL=s2`). Without that the boxes are empty (first try found [tonnes removed]).
+- Blocks on STOPE FINAL\5M BLOCKS\{STOPES, EXTRA STRINGS}, lines on STOPE FINAL\EXTRA STRINGS: same create / interrogate / write-grades / drop-low scripts with the layer and file names changed.
+- GROUP: blocks that keep their name take Kennet's group from the old blocks; new ones take the nearest old block's group.
+- Stopes: v2 rules unchanged. Result 131 stopes, [figure removed] INT ([ounces removed]) vs v2 116 / [tonnes removed] ([ounces removed]) and his ST 126 / [figure removed] ([ounces removed]). 17 stopes ([tonnes removed]) sit in the target areas. 103 of 131 solids needed RepairAlternate.

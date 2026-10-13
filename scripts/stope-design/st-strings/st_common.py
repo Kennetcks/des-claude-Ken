@@ -6,7 +6,8 @@ from run_all6 import dens
 from overlap_check import overlap, pairs
 ORIGIN=design.ORIGIN; MINV=0.5; MIN_G=1.5;   # Kennet 2026-10-13: first 0.5, then 1.5
 W='/home/claude/work/st/'
-def init(): design.MODEL_PRE='s'
+import os
+def init(): design.MODEL_PRE=os.environ.get('MODEL','s')
 def load_st():
     S=collections.OrderedDict()
     for r in csv.DictReader(open('/mnt/user-data/uploads/work/stopes_mine/st_strings.csv')):
