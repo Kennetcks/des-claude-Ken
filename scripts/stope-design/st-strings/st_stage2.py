@@ -2,20 +2,26 @@
 conceptual extra strings (X000...) on the nearest ST ore drive's 22 m level series, blocks along them (ST blocks
 always win any overlap), intersections."""
 from st_common import *
-import json
+import json, os
 from scipy.spatial import cKDTree
 from raster import PX,PY,PZ,NX,NY,NZ,SX,SY,SZ,RX,RY,RZ
 CUTP=2.6; RAD=50.0; MIN_T=1000
+MODEL=os.environ.get('MODEL','s')  # raster prefix; 's2' adds the target-box cells (Stope Final run)
+# Stope Final (Kennet 2026-10-13): optional TARGET_BOXES json [[x0,y0,z0,x1,y1,z1],...] = areas his ST task-solid stopes reach with no ST string within 50 m; ore inside them counts too
+BOX=np.array(json.load(open(os.environ['TARGET_BOXES']))) if os.environ.get('TARGET_BOXES') else np.zeros((0,6))
 if __name__=='__main__':
     S=load_st(); kept=pickle.load(open(W+'kept_st.pkl','rb'))
-    comp=np.load('s_comp.npy'); TD=np.load('s_td.npy',mmap_mode='r'); AU=np.load('s_au.npy',mmap_mode='r'); MN=np.load('s_mn.npy',mmap_mode='r')
+    comp=np.load(MODEL+'_comp.npy'); TD=np.load(MODEL+'_td.npy',mmap_mode='r'); AU=np.load(MODEL+'_au.npy',mmap_mode='r'); MN=np.load(MODEL+'_mn.npy',mmap_mode='r')
     sel=np.nonzero((np.asarray(AU)>=CUTP)&(np.asarray(TD)>0)&(np.asarray(MN)==0))[0]
     inv=np.full(comp.max()+1,-1,np.int64); pidx=np.nonzero(comp>=0)[0]; inv[comp[pidx]]=pidx
     c=sel//(RX*RY*RZ); r=sel%(RX*RY*RZ); si=r//(RY*RZ); sj=(r//RZ)%RY; sk=r%RZ
     p=inv[c]; k=p%NZ; j=(p//NZ)%NY; i=p//(NZ*NY)
     P=np.c_[i*PX+(si+0.5)*SX, j*PY+(sj+0.5)*SY, k*PZ+(sk+0.5)*SZ]; t=np.asarray(TD)[sel]*SX*SY*SZ; g=np.asarray(AU)[sel]
     allst=np.vstack([dens(v['pts']) for v in S.values()]); d50,_=cKDTree(allst).query(P,distance_upper_bound=RAD+1,workers=4)
-    m=d50<=RAD; P,t,g=P[m],t[m],g[m]
+    inbox=np.zeros(len(P),bool)
+    for bx in BOX: inbox|=np.all((P+ORIGIN>=bx[:3])&(P+ORIGIN<=bx[3:]),axis=1)
+    if len(BOX): print('>=2.6 ore in the target boxes beyond 50 m: %.0f t'%t[inbox&(d50>RAD)].sum())
+    m=(d50<=RAD)|inbox; P,t,g=P[m],t[m],g[m]
     print('>=2.6 ore within 50 m of the ST strings: %.3f Mt @ %.2f'%(t.sum()/1e6,(t*g).sum()/t.sum()))
     V=np.unique(np.concatenate([b['vox'] for b in kept])); Pv=np.c_[(V//2000)//2000,(V//2000)%2000,V%2000].astype(np.float32)+0.5
     dd,_=cKDTree(Pv).query(P.astype(np.float32),distance_upper_bound=1e4,workers=4); inb=dd<=0.9; far=dd>4.0

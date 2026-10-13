@@ -184,3 +184,30 @@ Kennet asked to group the ST 5 m stopes into 6 groups and see them with a legend
 - Grouping: k-means on each drive's centre (x, y, 1.5 x lowest RL), best of 40 seeds; every stope of a drive stays in one group, intersection solids count as their own drive. Groups named by area: A East lode (6176-6269, [tonnes removed]), B South upper (6259-6413, [tonnes removed]), C North upper (6292-6426, [tonnes removed]), D East lower (6064-6176, [tonnes removed]), E West deep (6056-6171, [tonnes removed]), F Main middle (6172-6324, [tonnes removed]). Drive-to-group table: `scripts/stope-design/st-strings/stope_groups.csv`.
 - `group-st-stopes.cs` writes GROUP (A-F) and Transformation Details ("Group A".."Group F") on 5M BLOCKS\STOPES and \EXTRA STRINGS, creates the "Stope groups" legend (Field GROUP, Value items, one colour each) and applies it to those two layers. "5m blocks AU v2" is untouched; switch back from the layer legend list.
 - Legend API: `new Deswik.Common.Core.Legends.Legend(name, other.Filters, other.GlobalConstants)`, items cloned with `new LegendItem(existingItem)` then Field/Value/Description/PenColor set, `App.Legends.Add(legend)`, `App.Legends.ApplyToLayer(layer, name)`. Layer's current legend is the layer property `Legend`.
+
+## Stope shapes from the ST 5 m blocks (2026-10-13)
+
+Kennet: combine the 5 m blocks into stopes, max 40-50 m, one 5 m pillar after each; pieces above 2.4 g/t but every stope averages above 2.5; cut a low-grade block and add its good part to the neighbour for a smoother stope; ore from the floor up = just cut flat there; higher grade at the top of an end = chamfer the end wall, max 37 deg (he confirmed off vertical); ends can also stay vertical - the chamfer is only to pick up the higher grade; always operational.
+
+Method (`scripts/stope-design/stope-shapes`):
+1. `export-blocks-read-only.cs` -> st_blocks_export.tsv (blocks, split pieces a = lower / b = upper, geometry).
+2. `stopes.py`: per drive, long section on a 0.5 m grid (piece grade uniform). Each candidate stope (contiguous columns, 10-50 m, no chainage gaps) is shaped by coordinate descent: top = full height over one contiguous run of columns, a single flat cut height (7.5 m steps of 2.5) on each side of it; end chamfer offset 0..tan(37)*end height in 2.5 m steps (only when the end top is >= 12.5 m); objective t*(g-2.4), redone on 2.5 if the average falls below 2.5; >= 1,500 t. DP picks non-overlapping stopes with >= 5 m between top ends; > 40 m scores 5% less so 50 m is used only when it pays. Intersection solids >= 2.5 g/t become their own stopes.
+3. `geom.py`: clip each piece's mesh by the flat top and the chamfer planes (plane through the end column's floor/top points, horizontal across the drive), stretch pieces 5 cm so neighbours overlap, union with manifold3d, collapse short edges (`collapse.py`). `write_geom.py` writes stope_shapes_geometry.txt (faces ONE-based for Polyface.AddTriangle).
+4. `create-stope-shapes.cs` on 5M BLOCKS\STOPE SHAPES; Deswik rejects union slivers (Polyface.Volume = -1, interrogation silently returns Success=false with no CSV) - `Polyface.RepairAlternate(true,true,true)` fixes them all.
+5. `interrogate-stope-shapes.cs`, then `write-grades-stope-shapes.cs` (INT_*, AU v2 legend applied to the layer, stope_shapes_grades.csv). `allpdf.py` draws every drive's long section.
+
+First result: 115 stopes, [figure removed] (INT), none below 2.5, 16 with chamfers, median 35 m. Python estimate vs Deswik INT_AU within +-0.03 g/t typically.
+Gotcha: GROUP comes from the blocks as they are in the drawing; Kennet re-grouped some (group H appeared).
+
+### Stope shapes v2 (Kennet's review, 2026-10-13) - current, layer 5M BLOCKS\STOPE SHAPES V2 (v1 kept)
+- A chamfered end goes straight up 5 m from the floor first, then leans max 40 deg off vertical (he settled on 40 after first saying 37 and 45). Grid mask: foot at end+d for z<5, line from (end+d, 5) to (end, top) above. Solids: pieces split at floor+5, lower part cut by the vertical plane at the foot, upper part by the inclined plane.
+- Every stope keeps >= 3 m along the floor at full stope height (between the chamfer feet, on columns at the stope's max top) - rejects stopes that are almost all chamfer.
+- Pillars: "pillar means money lost" - put them in the lowest-grade sections when possible. The DP maximises metal above 2.4 in stopes, which is the same as leaving the least metal in pillars.
+- Result: 116 stopes [figure removed] INT, none < 2.5, 16 chamfered (max 36.8 deg), median 33 m. Between stopes (pillars + low-grade gaps): 59 gaps, [figure removed]. 89 of 116 solids needed RepairAlternate.
+
+### Stope Final (2026-10-13) - current, layer DESIGN\CREATING PLILLAR/STOPES\STOPE FINAL
+Kennet compared v2 with his own stopes on SCHEDULER\TASK SOLIDS\ST (that layer holds every LH_Stope solid twice; dedupe by volume + centroid) and asked why v2 had no stopes in some areas his have. Main cause: about [figure removed] sat more than 50 m from any ST string, so no block was ever made there. He asked to add extra strings there and rerun the whole chain (5 m blocks, grades, stopes) on a new layer "Stope Final".
+- Target boxes: bounds of his ST pieces with no ST string nearby, +-5 m (8 boxes). `st_stage2.py` takes them via `TARGET_BOXES=<json>`; ore inside a box counts as if it were within 50 m. The block-model raster must cover the boxes too (export the box cells and build raster `s2` = ST cells + box cells; `MODEL=s2`). Without that the boxes are empty (first try found [tonnes removed]).
+- Blocks on STOPE FINAL\5M BLOCKS\{STOPES, EXTRA STRINGS}, lines on STOPE FINAL\EXTRA STRINGS: same create / interrogate / write-grades / drop-low scripts with the layer and file names changed.
+- GROUP: blocks that keep their name take Kennet's group from the old blocks; new ones take the nearest old block's group.
+- Stopes: v2 rules unchanged. Result 131 stopes, [figure removed] INT ([ounces removed]) vs v2 116 / [tonnes removed] ([ounces removed]) and his ST 126 / [figure removed] ([ounces removed]). 17 stopes ([tonnes removed]) sit in the target areas. 103 of 131 solids needed RepairAlternate.
