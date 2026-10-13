@@ -1,7 +1,7 @@
 """Kennet's ST strings (DESIGN\\CREATING PLILLAR/STOPES\\ST, 2026-10-13): 5 m blocks along his level strings with the v8
 rules, then extra conceptual strings for >= 2.6 g/t ore within 50 m of his strings that the blocks miss."""
-import sys, csv, collections, time, pickle, numpy as np, multiprocessing as mp
-sys.path.insert(0,'/home/claude/work'); import design8 as design
+import sys, os, csv, collections, time, pickle, numpy as np, multiprocessing as mp
+sys.path.insert(0,'/home/claude/work'); import importlib; design=importlib.import_module(os.environ.get('DESIGN_MOD','design8'))
 from run_all6 import dens
 from overlap_check import overlap, pairs
 ORIGIN=design.ORIGIN; MINV=0.5; MIN_G=1.5;   # Kennet 2026-10-13: first 0.5, then 1.5

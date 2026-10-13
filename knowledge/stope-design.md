@@ -225,3 +225,12 @@ Kennet's review of v2 (3CA0D1B B46a/b, "you could have moved it to the right"; "
 - stopes.py `flat_top`: while the columns at the stope's max top are narrower than 3 m (e.g. a 2.4 m drive-end column), they come down to the next top.
 - Result: 138 stopes [figure removed] ([ounces removed]) vs v2 133 / [figure removed] ([ounces removed]). None below 2.5 (one at 2.49 removed), all max-top runs >= 3 m.
 - Still missed: ~[tonnes removed] of his ST stopes around E8140 N63400-63430 RL6340-6405 sit within 15 m of his ramp (0-15 m), which the 15 m ramp standoff excludes.
+
+## One lode per stope: STOPE FINAL V5 (2026-10-13)
+
+Kennet's rule: when two lodes sit side by side with low grade between them, the stope goes on the higher-grade lode. The
+zone between them is not mined. Do not take a span over both just because the diluted span grade is > 2.6.
+design8 `SPAN_PICK=shape SHAPE_REF=2.6 SHAPE_DRIFT=0.2` picks a single shape per station (width plus a straight dip line)
+that maximises the gold above 2.6. Along strike it follows one path with the drillable limits: <= 1 m per 5 m section,
+width one step. Wall nudges in this mode add only slices that grade >= 2.6 on their own.
+Scripts and results: scripts/stope-design/stope-final-v5/README.md.
