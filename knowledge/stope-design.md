@@ -162,3 +162,14 @@ Kennet (2026-10-12) on v7 said "the stopes can't intercept them, otherwise I am 
 - **Leftovers.** On very sharp kinks of trial lines, blocks two sections apart can still cross. The lower-grade one is dropped (`fix_self8.py`). Intersections may not overlap any block either.
 - **Check.** Run `python3 overlap_check.py kept8y.pkl 0.5` before building. V8 leaves two same-drive slivers of about 1 m³ (0.25 m sampling), and no overlaps between drives.
 - **Result (Deswik).** 5,643 blocks, [figure removed]. Above 2.6: 1,992 blocks, [figure removed] (V7: [figure removed], which counted the overlaps twice). There are 43 intersections. Capture of ≥ 2.6 model ore is 77% (V7: 76%).
+
+## 5 m blocks on Kennet's own strings (ST layer, 2026-10-13)
+Kennet put level strings on `DESIGN\CREATING PLILLAR/STOPES\ST` and said: "use this lines as reference to create the stopes (5m one)", not the whole mine, "after that, you are going to create conceptual extra strings", and "capture anything in a 50m radius strings". Scripts are in `scripts/stope-design/st-strings/`.
+
+- **Reading his strings.** Run `export-st-strings-read-only.cs` to write `st_strings.csv`. His layout is one ramp plus, on each level, a 1:50 access off the ramp and flat ore drives. So: steeper than 1:12 is the ramp (skipped), between 1:200 and 1:12 is an access (blocks only above 1.5 g/t), and flat is an ore drive (blocks kept at any grade).
+- **Model.** `export-st-cells-read-only.cs` exports the parent cells within 70 m of the strings (50 m search plus the 17.5 m wall reach). Build the raster with `raster.py s st_blocks.f32`.
+- **Blocks (`st_stage1.py`).** v8 rules (`design8.py`), then `st_common.resolve` so no two strings' blocks overlap, then kink drops.
+- **Extra strings (`st_stage2.py`).** Take ≥ 2.6 g/t unmined ore within 50 m (3D) of any ST string and more than 4 m from the ST blocks. Pockets are built as in v7 (10 m cells ≥ 150 t, pockets ≥ 1,000 t). Lines go on the nearest ST ore drive's 22 m level series, named X000…. Blocks are designed along them, and the ST blocks always win any overlap. Extra strings with no block above 2.0 are dropped.
+- **Building.** Run `st_geom.py` to write `st_blocks_geometry.txt` and `st_extra_strings.csv`, then `create-st-blocks.cs`, `interrogate-st-blocks.cs` and `write-grades-st-blocks.cs`. Blocks go on `DESIGN\CREATING PLILLAR/STOPES\5M BLOCKS\{ST ORE DRIVES, ST ACCESSES, EXTRA STRINGS, INTERSECTIONS}` and the lines on `...\EXTRA STRINGS`. DRIVE NUMBER is the handle of his string.
+- **First run (Deswik).** 1,871 blocks, [figure removed]. ST ore drives: 913 blocks, [figure removed], of which [figure removed] is above 2.6. Extra strings: 63 lines, 883 blocks, [figure removed], of which [figure removed] is above 2.6. Capture of the ≥ 2.6 ore within 50 m ([figure removed]) went from 56% with the ST blocks alone to 73% with the extra strings.
+

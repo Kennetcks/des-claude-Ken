@@ -7,7 +7,7 @@ sys.path.insert(0,'/home/claude/work'); import design8 as design
 from overlap_check import overlap
 from raster import Model
 ORIGIN=design.ORIGIN; NL2=2*design.NL; GAP=(0.5,12.0)
-kept=pickle.load(open(sys.argv[1],'rb')); M=Model('n'); S=design.load_strings()
+kept=pickle.load(open(sys.argv[1],'rb')); import os; M=Model(os.environ.get('MODEL','n')); S=design.load_strings()
 acc_ends=np.array([p for v in S.values() if v['act']!='OD' and v['lv']=='LAT' for p in (v['pts'][0],v['pts'][-1])])+ORIGIN
 claimed={}
 for b in kept:
