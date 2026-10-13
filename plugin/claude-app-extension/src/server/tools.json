@@ -352,7 +352,7 @@
   },
   {
     "name": "run_csharp",
-    "description": "Write and run C# inside Deswik for anything the other tools can't do: create/modify CAD geometry and layers, bulk analysis, reports, custom schedule edits. You supply the BODY of: object Run(Deswik.Graphics.Application App, Deswik.Scheduler.Engine.Schedule Schedule, StringBuilder Out). Schedule may be null. Write results with Out.AppendLine(...). C# 5 ONLY (no $\"\" interpolation, no ?. , no nameof, no => members, no out var). Read-only code (modifies=false) runs straight away; code that changes data shows the user an approval window unless they turned on auto-approve. Set modifies honestly. Every script is saved to the Scripts folder.",
+    "description": "Write and run C# inside Deswik for anything the other tools can't do: create/modify CAD geometry and layers, bulk analysis, reports, custom schedule edits. You supply the BODY of: object Run(Deswik.Graphics.Application App, Deswik.Scheduler.Engine.Schedule Schedule, StringBuilder Out). Schedule may be null. Write results with Out.AppendLine(...). Modern C# (C# 12 on .NET 8 in Deswik 2026.1) is fine. Read-only code (modifies=false) runs straight away; code that changes data shows the user an approval window unless they turned on auto-approve. Set modifies honestly. Every script is saved to the Scripts folder.",
     "inputSchema": {
       "type": "object",
       "properties": {

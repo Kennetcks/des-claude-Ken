@@ -26,7 +26,7 @@ namespace Kennet.DeswikClaude
         public PluginSettings Settings { get; set; }
 
         public event Action<string> AssistantText;
-        public event Action<string, string> ToolActivity;   // (tool name, short note)
+        public event Action<string, string, bool?> ToolActivity;   // (tool name, short note, null = started / true = ok / false = error)
         public event Action<string> Status;
 
         public ClaudeAgent(DeswikTools tools, PluginSettings settings)
@@ -84,10 +84,12 @@ namespace Kennet.DeswikClaude
                     ct.ThrowIfCancellationRequested();
                     string name = (string)block["name"];
                     var input = block["input"] as JObject ?? new JObject();
-                    if (ToolActivity != null) ToolActivity(name, Describe(name, input));
+                    string note = Describe(name, input);
+                    if (ToolActivity != null) ToolActivity(name, note, null);
                     RaiseStatus("Running " + name + "…");
 
                     ToolResult r = _tools.Execute(name, input); // UI thread
+                    if (ToolActivity != null) ToolActivity(name, note, !r.IsError);
                     var tr = new JObject
                     {
                         ["type"] = "tool_result",
@@ -142,7 +144,7 @@ namespace Kennet.DeswikClaude
             }
         }
 
-        private static string Describe(string name, JObject input)
+        internal static string Describe(string name, JObject input)
         {
             string d = (string)input["description"] ?? (string)input["reason"] ?? (string)input["task_id"] ?? (string)input["command_id"] ?? "";
             return d.Length > 120 ? d.Substring(0, 120) + "…" : d;

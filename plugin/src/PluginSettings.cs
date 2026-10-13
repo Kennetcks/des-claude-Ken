@@ -16,6 +16,8 @@ namespace Kennet.DeswikClaude
         public bool AutoApproveReadOnly = true;
         /// <summary>Run changes without the approval window. Off by default; save often if you turn it on.</summary>
         public bool AutoApproveChanges = false;
+        /// <summary>Panel toolbar (model, buttons, checkboxes) hidden behind the "Options" toggle.</summary>
+        public bool ToolbarCollapsed = false;
 
         public static readonly string[] Models = { "claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-5-5" };
 
