@@ -80,9 +80,9 @@ namespace Kennet.DeswikClaude
             _undo.Enabled = false;
             _undo.Click += (s, e) => UndoLast();
             var scripts = ToolButton("▤ Scripts", "Open the folder where every script Claude runs is saved");
-            scripts.Click += (s, e) => { try { System.Diagnostics.Process.Start(PluginSettings.ScriptsFolder); } catch { } };
+            scripts.Click += (s, e) => { try { OpenFolder(PluginSettings.ScriptsFolder); } catch { } };
             var guides = ToolButton("ℹ Guides", "Open the folder for your own extra guides (*.md)");
-            guides.Click += (s, e) => { try { System.Diagnostics.Process.Start(PluginSettings.KnowledgeFolder); } catch { } };
+            guides.Click += (s, e) => { try { OpenFolder(PluginSettings.KnowledgeFolder); } catch { } };
             var autoRead = new CheckBox { Text = "Auto-run reads", AutoSize = true, Checked = _settings.AutoApproveReadOnly, Margin = new Padding(6, 6, 2, 2) };
             autoRead.CheckedChanged += (s, e) => { _settings.AutoApproveReadOnly = autoRead.Checked; SafeSave(); };
             var autoChange = new CheckBox { AutoSize = true, Checked = _settings.AutoApproveChanges, Margin = new Padding(6, 6, 2, 2) };
@@ -164,6 +164,12 @@ namespace Kennet.DeswikClaude
             if (string.IsNullOrWhiteSpace(_settings.ApiKey))
                 AppendNote("No API key needed if you chat from the Claude desktop app (Deswik extension installed). " +
                            "To chat here in the panel instead, open ⚙ Options and click 'API key'.");
+        }
+
+        // .NET 8 no longer opens folders through Process.Start(path) unless UseShellExecute is set.
+        private static void OpenFolder(string path)
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true });
         }
 
         private Button ToolButton(string text, string tip)

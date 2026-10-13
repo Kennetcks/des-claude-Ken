@@ -187,7 +187,7 @@ namespace Kennet.DeswikClaude
   ""input_schema"": { ""type"": ""object"", ""properties"": { ""command_id"": { ""type"": ""string"" }, ""reason"": { ""type"": ""string"" } }, ""required"": [""command_id"", ""reason""] } },
 
 { ""name"": ""run_csharp"",
-  ""description"": ""Write and run C# inside Deswik for anything the other tools can't do: create/modify CAD geometry and layers, bulk analysis, reports, custom schedule edits. You supply the BODY of: object Run(Deswik.Graphics.Application App, Deswik.Scheduler.Engine.Schedule Schedule, StringBuilder Out). Schedule may be null. Write results with Out.AppendLine(...). C# 5 ONLY (no $\""\"" interpolation, no ?. , no nameof, no => members, no out var). Read-only code (modifies=false) runs straight away; code that changes data shows the user an approval window unless they turned on auto-approve. Set modifies honestly. Every script is saved to the Scripts folder."",
+  ""description"": ""Write and run C# inside Deswik for anything the other tools can't do: create/modify CAD geometry and layers, bulk analysis, reports, custom schedule edits. You supply the BODY of: object Run(Deswik.Graphics.Application App, Deswik.Scheduler.Engine.Schedule Schedule, StringBuilder Out). Schedule may be null. Write results with Out.AppendLine(...). Modern C# (C# 12 on .NET 8 in Deswik 2026.1) is fine. Read-only code (modifies=false) runs straight away; code that changes data shows the user an approval window unless they turned on auto-approve. Set modifies honestly. Every script is saved to the Scripts folder."",
   ""input_schema"": { ""type"": ""object"", ""properties"": {
       ""description"": { ""type"": ""string"", ""description"": ""Short title of what the code does."" },
       ""usings"": { ""type"": ""array"", ""items"": { ""type"": ""string"" }, ""description"": ""Extra namespaces, e.g. Deswik.Graphics.Figures"" },
@@ -569,9 +569,12 @@ namespace Kennet.DeswikClaude
                     ToId = x.Item2.Id
                 };
                 if (x.Item5.HasValue) dep.LayerId = x.Item5.Value;
-                if (!string.IsNullOrWhiteSpace(x.Item4)) dep.Lag = new Duration(x.Item4.Trim(), TimeUnit.d);
-                if (s.Add(dep, false, true, false)) ok++;
-                else failed.Add(x.Item1.Id + "→" + x.Item2.Id + " (" + s.LastErrorCode + ")");
+                if (!string.IsNullOrWhiteSpace(x.Item4)) dep.Lag = Lag.FromDuration(new Duration(x.Item4.Trim(), TimeUnit.d));
+                AddDependenciesResult added = s.Add(dep, false, true, false);
+                if (added != null && added.CompleteSuccess) ok++;
+                else failed.Add(x.Item1.Id + "→" + x.Item2.Id + " (" + (added == null ? s.LastErrorCode.ToString() :
+                                added.CyclicDependenciesFoundAndDropped > 0 ? "would create a cycle" :
+                                added.DuplicateDependenciesFoundAndDropped > 0 ? "already exists" : s.LastErrorCode.ToString()) + ")");
             }
             AfterScheduleEdit(s);
             return "Added " + ok + " of " + list.Count + " dependencies (Ctrl+Z in the scheduler undoes them)." +
@@ -586,7 +589,7 @@ namespace Kennet.DeswikClaude
             Cursor.Current = Cursors.WaitCursor;
             try
             {
-                var leveller = new ResourceLeveller(s, null, LevellingSource.Standard);
+                var leveller = new ForwardsResourceLeveller(s, null, LevellingSource.Standard);
                 IList<string> errors;
                 bool ok = leveller.Level(out errors, true);
                 AfterScheduleEdit(s);

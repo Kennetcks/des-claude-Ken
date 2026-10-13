@@ -1,18 +1,20 @@
 using System;
-using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using Microsoft.CSharp;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Emit;
 using DApp = Deswik.Graphics.Application;
 
 namespace Kennet.DeswikClaude
 {
     /// <summary>
     /// Compiles and runs a C# snippet inside Deswik, with access to the CAD application and the IS schedule.
-    /// Uses the C# compiler that ships with .NET Framework (C# 5 syntax), since Deswik doesn't include Roslyn.
+    /// Deswik 2026.1 runs on .NET 8, which has no built-in compiler, so the plugin ships Roslyn
+    /// (Microsoft.CodeAnalysis*.dll) next to its own DLL.
     /// </summary>
     public static class CodeRunner
     {
@@ -49,76 +51,68 @@ namespace Kennet.DeswikClaude
         public static string CompileAndRun(string body, IEnumerable<string> usings, DApp app, Deswik.Scheduler.Engine.Schedule schedule)
         {
             string source = BuildSource(body, usings);
-
-            var cp = new CompilerParameters
-            {
-                GenerateInMemory = true,
-                GenerateExecutable = false,
-                IncludeDebugInformation = false,
-                TreatWarningsAsErrors = false,
-                CompilerOptions = "/optimize-"
-            };
+            var tree = CSharpSyntaxTree.ParseText(source, new CSharpParseOptions(LanguageVersion.CSharp12));
 
             // Reference everything already loaded in Deswik (one copy per assembly name).
-            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var refs = new Dictionary<string, MetadataReference>(StringComparer.OrdinalIgnoreCase);
             foreach (Assembly asm in AppDomain.CurrentDomain.GetAssemblies())
             {
                 try
                 {
                     if (asm.IsDynamic || string.IsNullOrEmpty(asm.Location) || !File.Exists(asm.Location)) continue;
                     string name = asm.GetName().Name;
-                    if (name.StartsWith("KennetDynamic", StringComparison.Ordinal)) continue;
-                    if (seen.Add(name)) cp.ReferencedAssemblies.Add(asm.Location);
+                    if (name.StartsWith("KennetDynamic", StringComparison.Ordinal) || refs.ContainsKey(name)) continue;
+                    refs[name] = MetadataReference.CreateFromFile(asm.Location);
                 }
-                catch { /* some assemblies refuse Location; skip */ }
+                catch { /* some assemblies refuse Location or aren't readable metadata; skip */ }
             }
 
-            CompilerResults res = Compile(cp, source);
-            var errors = res.Errors.Cast<CompilerError>().Where(e => !e.IsWarning).ToList();
+            var options = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary,
+                optimizationLevel: OptimizationLevel.Debug, allowUnsafe: true,
+                reportSuppressedDiagnostics: false);
+            string asmName = "KennetDynamic_" + Guid.NewGuid().ToString("N");
 
-            // Retry 1: a type lives in a Deswik DLL that isn't loaded yet (CS0012) -> add it from the install folder.
-            var missing = errors.Where(e => e.ErrorNumber == "CS0012")
-                                .Select(e => MissingAssemblyName(e.ErrorText)).Where(n => n != null).Distinct().ToList();
+            List<Diagnostic> errors;
+            byte[] image = Emit(CSharpCompilation.Create(asmName, new[] { tree }, refs.Values, options), out errors);
+
+            // Retry: a type lives in a Deswik DLL that isn't loaded yet (CS0012) -> add it from the install folder.
+            var missing = errors.Where(e => e.Id == "CS0012")
+                                .Select(e => MissingAssemblyName(e.GetMessage())).Where(n => n != null).Distinct().ToList();
             if (missing.Count > 0)
             {
                 foreach (string m in missing)
                 {
                     string p = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, m + ".dll");
-                    if (File.Exists(p) && seen.Add(m)) cp.ReferencedAssemblies.Add(p);
+                    if (File.Exists(p) && !refs.ContainsKey(m)) refs[m] = MetadataReference.CreateFromFile(p);
                 }
-                res = Compile(cp, source);
-                errors = res.Errors.Cast<CompilerError>().Where(e => !e.IsWarning).ToList();
+                image = Emit(CSharpCompilation.Create(asmName, new[] { tree }, refs.Values, options), out errors);
             }
 
-            // Retry 2: a loaded assembly can't be used as a reference (native image, duplicate identity, etc.).
-            if (errors.Any(e => e.ErrorNumber == "CS0006" || e.ErrorNumber == "CS0009" || e.ErrorNumber == "CS1703" || e.ErrorNumber == "CS1704"))
+            // Retry: a loaded assembly can't be used as a reference (native/mixed image, unreadable metadata).
+            var unreadable = errors.Where(e => e.Id == "CS0009" || e.Id == "CS0006").Select(e => e.GetMessage()).ToList();
+            if (unreadable.Count > 0)
             {
-                var keep = cp.ReferencedAssemblies.Cast<string>()
-                    .Where(p =>
-                    {
-                        string n = Path.GetFileNameWithoutExtension(p);
-                        return n.StartsWith("Deswik", StringComparison.OrdinalIgnoreCase) || n.StartsWith("System", StringComparison.OrdinalIgnoreCase) ||
-                               n.StartsWith("Microsoft", StringComparison.OrdinalIgnoreCase) || n.StartsWith("DevExpress", StringComparison.OrdinalIgnoreCase) ||
-                               n == "mscorlib" || n == "netstandard" || n == "Newtonsoft.Json" || n.StartsWith("Kennet", StringComparison.OrdinalIgnoreCase);
-                    }).ToList();
-                var bad = new HashSet<string>(errors.Where(e => e.ErrorNumber == "CS0006" || e.ErrorNumber == "CS0009")
-                                                     .Select(e => e.ErrorText), StringComparer.OrdinalIgnoreCase);
-                cp.ReferencedAssemblies.Clear();
-                foreach (string p in keep)
-                    if (!bad.Any(b => b.IndexOf(Path.GetFileName(p), StringComparison.OrdinalIgnoreCase) >= 0))
-                        cp.ReferencedAssemblies.Add(p);
-                res = Compile(cp, source);
-                errors = res.Errors.Cast<CompilerError>().Where(e => !e.IsWarning).ToList();
+                foreach (var kv in refs.ToList())
+                {
+                    string file = Path.GetFileName(((PortableExecutableReference)kv.Value).FilePath ?? "");
+                    if (file.Length > 0 && unreadable.Any(m => m.IndexOf(file, StringComparison.OrdinalIgnoreCase) >= 0)) refs.Remove(kv.Key);
+                }
+                image = Emit(CSharpCompilation.Create(asmName, new[] { tree }, refs.Values, options), out errors);
             }
-            if (errors.Count > 0)
+
+            if (image == null)
             {
-                var sb = new StringBuilder("COMPILE FAILED (C# 5 compiler: no $\"\" strings, no ?. operator, no nameof, no => members).\n");
+                var sb = new StringBuilder("COMPILE FAILED (C# 12, .NET 8).\n");
                 foreach (var e in errors.Take(25))
-                    sb.AppendFormat("line {0}: {1} {2}\n", e.Line, e.ErrorNumber, e.ErrorText);
+                {
+                    var pos = e.Location.GetMappedLineSpan();
+                    sb.AppendFormat("line {0}: {1} {2}\n", pos.StartLinePosition.Line + 1, e.Id, e.GetMessage());
+                }
                 return sb.ToString();
             }
 
-            Type t = res.CompiledAssembly.GetType("KennetDynamic.Script");
+            Assembly compiled = Assembly.Load(image);
+            Type t = compiled.GetType("KennetDynamic.Script");
             MethodInfo run = t.GetMethod("Run");
             var output = new StringBuilder();
             try
@@ -136,10 +130,15 @@ namespace Kennet.DeswikClaude
             }
         }
 
-        private static CompilerResults Compile(CompilerParameters cp, string source)
+        /// <summary>Compiles to an in-memory DLL; returns null and the errors if it fails.</summary>
+        private static byte[] Emit(CSharpCompilation compilation, out List<Diagnostic> errors)
         {
-            using (var provider = new CSharpCodeProvider())
-                return provider.CompileAssemblyFromSource(cp, source);
+            using (var ms = new MemoryStream())
+            {
+                EmitResult res = compilation.Emit(ms);
+                errors = res.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+                return res.Success ? ms.ToArray() : null;
+            }
         }
 
         /// <summary>Pulls 'Deswik.Geometry' out of "...add a reference to assembly 'Deswik.Geometry, Version=...'".</summary>

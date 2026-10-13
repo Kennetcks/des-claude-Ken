@@ -1,4 +1,6 @@
-# Claude Assistant for Deswik CAD 2024.2 (v0.3.1)
+# Claude Assistant for Deswik CAD 2026.1 (v0.4.0)
+
+v0.4.0 is for **Deswik 2026.1**, which runs on .NET 8. For Deswik 2024.2 (.NET Framework) use v0.3.1 (git tag history / `Documents\DeswikPlugins\v0.3.1`).
 
 Lets Claude work on your open Deswik drawing and Interactive Scheduler (IS) schedule. There are two ways to chat:
 
@@ -10,7 +12,7 @@ In both cases, **every change pops up an approval window inside Deswik first.**
 ---
 
 ## 1. Install the Deswik plugin (needed for both)
-1. Build the DLL (see *Build from source*; it lands in `src\bin\Release\`) and copy `Kennet.DeswikClaude.dll` to a folder, e.g. `C:\DeswikPlugins\`. **Don't rename it.**
+1. Build the DLL (see *Build from source*; it lands in `src\bin\Release\net8.0-windows\`) and copy `Kennet.DeswikClaude.dll` **together with `Microsoft.CodeAnalysis.dll` and `Microsoft.CodeAnalysis.CSharp.dll`** (needed by run_csharp) to one folder, e.g. `C:\DeswikPlugins\`. **Don't rename them.**
 2. **Unblock it:** right-click the DLL > Properties > tick **Unblock** > OK. Or run in PowerShell:
    `Get-ChildItem C:\DeswikPlugins -Recurse | Unblock-File`
    Without this, Plugin Manager says "does not have a valid Deswik.CAD load and unload interface".
@@ -53,7 +55,7 @@ The Claude app runs a small Node.js bridge (inside the .mcpb). The bridge talks 
 Both are checkboxes in the panel and are stored in `settings.json`.
 
 ## Build from source
-`src\DeswikClaude.csproj` (Visual Studio, .NET Framework 4.7.2; set `<DeswikDir>` if Deswik is elsewhere). Build from a full clone of the repo so `..\..\knowledge\*.md` is found.
+`src\DeswikClaude.csproj` (SDK-style, `net8.0-windows`; `dotnet build -c Release` or Visual Studio 2022; set `<DeswikDir>` if Deswik is elsewhere). Build from a full clone of the repo so `..\..\knowledge\*.md` is found.
 Extension source: `claude-app-extension\src`. Repack with `npx @anthropic-ai/mcpb pack`.
 
 ## Safety

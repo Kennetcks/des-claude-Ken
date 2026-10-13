@@ -3,8 +3,10 @@ using System.Net;
 using System.Windows.Forms;
 using DApp = Deswik.Graphics.Application;
 
-[assembly: System.Reflection.AssemblyVersion("0.3.1.0")]
-[assembly: System.Reflection.AssemblyFileVersion("0.3.1.0")]
+[assembly: System.Reflection.AssemblyVersion("0.4.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("0.4.0.0")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v8.0", FrameworkDisplayName = ".NET 8.0")]
+[assembly: System.Runtime.Versioning.SupportedOSPlatform("windows")]
 [assembly: System.Reflection.AssemblyTitle("Claude Assistant for Deswik")]
 
 namespace Kennet.DeswikClaude
@@ -21,7 +23,7 @@ namespace Kennet.DeswikClaude
 
         // ---- Properties read by the Deswik plugin host -----------------------------------------
         public string ProductName { get { return "Claude Assistant"; } }
-        public string ProductVersion { get { return "0.3.1"; } }
+        public string ProductVersion { get { return "0.4.0"; } }
         public string DockStyle { get { return "Tab"; } }
         public string DockPosition { get { return "Right"; } }
         public bool AllowFloating { get { return true; } }
@@ -38,6 +40,21 @@ namespace Kennet.DeswikClaude
                 _app = value;
                 if (_panel != null) _panel.OnApplicationChanged(value);
             }
+        }
+
+        // Roslyn (Microsoft.CodeAnalysis*.dll) ships next to this DLL; make sure .NET finds it there.
+        static ClaudeChatPlugin()
+        {
+            string dir = System.IO.Path.GetDirectoryName(typeof(ClaudeChatPlugin).Assembly.Location);
+            AppDomain.CurrentDomain.AssemblyResolve += (s, e) =>
+            {
+                try
+                {
+                    string file = System.IO.Path.Combine(dir, new System.Reflection.AssemblyName(e.Name).Name + ".dll");
+                    return System.IO.File.Exists(file) ? System.Reflection.Assembly.LoadFrom(file) : null;
+                }
+                catch { return null; }
+            };
         }
 
         public ClaudeChatPlugin(DApp app)

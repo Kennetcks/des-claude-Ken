@@ -61,8 +61,8 @@ namespace Kennet.DeswikClaude
                 NamedPipeServerStream pipe = null;
                 try
                 {
-                    pipe = new NamedPipeServerStream(PipeName, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances,
-                                                     PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 1 << 16, 1 << 16, CreateSecurity());
+                    pipe = NamedPipeServerStreamAcl.Create(PipeName, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances,
+                                                           PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 1 << 16, 1 << 16, CreateSecurity());
                     pipe.WaitForConnectionAsync(_cts.Token).GetAwaiter().GetResult();
                     var connected = pipe;
                     pipe = null;
