@@ -25,17 +25,17 @@ namespace Kennet.DeswikClaude
 
         private readonly Control _ui;
         private readonly DeswikTools _tools;
-        private readonly Action<string> _log;
+        private readonly Action<string, string, bool?> _activity; // (tool, detail, null = started / true = ok / false = error)
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
         public int CallsServed { get; private set; }
         public string LastError { get; private set; }
 
-        public McpPipeServer(Control uiThreadControl, DeswikTools tools, Action<string> log)
+        public McpPipeServer(Control uiThreadControl, DeswikTools tools, Action<string, string, bool?> activity)
         {
             _ui = uiThreadControl;
             _tools = tools;
-            _log = log;
+            _activity = activity;
         }
 
         public void Start()
@@ -117,10 +117,13 @@ namespace Kennet.DeswikClaude
                 case "call":
                     string name = (string)req["name"] ?? "";
                     var input = req["input"] as JObject ?? new JObject();
+                    string detail = ClaudeAgent.Describe(name, input);
                     ToolResult r = OnUi(() =>
                     {
-                        if (_log != null) _log("⚙ [Claude app] " + name);
-                        return _tools.Execute(name, input);
+                        if (_activity != null) _activity(name, detail, null);
+                        ToolResult res = _tools.Execute(name, input);
+                        if (_activity != null) _activity(name, detail, !res.IsError);
+                        return res;
                     });
                     CallsServed++;
                     return new JObject { ["text"] = r.Text ?? "", ["isError"] = r.IsError };

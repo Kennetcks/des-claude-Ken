@@ -3,6 +3,10 @@ using System.Net;
 using System.Windows.Forms;
 using DApp = Deswik.Graphics.Application;
 
+[assembly: System.Reflection.AssemblyVersion("0.3.1.0")]
+[assembly: System.Reflection.AssemblyFileVersion("0.3.1.0")]
+[assembly: System.Reflection.AssemblyTitle("Claude Assistant for Deswik")]
+
 namespace Kennet.DeswikClaude
 {
     /// <summary>
