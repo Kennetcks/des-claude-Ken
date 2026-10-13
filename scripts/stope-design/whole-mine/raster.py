@@ -20,11 +20,11 @@ def build(files=('corridor_blocks.f32',),pre='r'):
             ii=idx[s:s+200000]
             cell=base[ii,None]+((x0[ii,None]+a)*RY+(y0[ii,None]+bb))*RZ+(z0[ii,None]+c)
             TD[cell]=b[ii,7,None]; AU[cell]=b[ii,6,None]; MN[cell]=(b[ii,8,None]>0)
-    np.save('./%s_comp.npy'%pre,comp); np.save('./%s_td.npy'%pre,TD); np.save('./%s_au.npy'%pre,AU); np.save('./%s_mn.npy'%pre,MN)
+    np.save('/home/claude/work/%s_comp.npy'%pre,comp); np.save('/home/claude/work/%s_td.npy'%pre,TD); np.save('/home/claude/work/%s_au.npy'%pre,AU); np.save('/home/claude/work/%s_mn.npy'%pre,MN)
     print('raster cells',len(TD),'filled',(TD>0).mean(),'s',time.time()-t0)
 class Model:
     def __init__(s,pre='r'):
-        s.comp=np.load('./%s_comp.npy'%pre); s.TD=np.load('./%s_td.npy'%pre,mmap_mode='r'); s.AU=np.load('./%s_au.npy'%pre,mmap_mode='r'); s.MN=np.load('./%s_mn.npy'%pre,mmap_mode='r')
+        s.comp=np.load('/home/claude/work/%s_comp.npy'%pre); s.TD=np.load('/home/claude/work/%s_td.npy'%pre,mmap_mode='r'); s.AU=np.load('/home/claude/work/%s_au.npy'%pre,mmap_mode='r'); s.MN=np.load('/home/claude/work/%s_mn.npy'%pre,mmap_mode='r')
     def look(s,x,y,z):
         """x,y,z relative to model origin -> density, grade, mined (0 outside corridor)"""
         i=np.floor(x/PX).astype(np.int64); j=np.floor(y/PY).astype(np.int64); k=np.floor(z/PZ).astype(np.int64)
