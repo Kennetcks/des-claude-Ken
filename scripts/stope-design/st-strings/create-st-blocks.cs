@@ -1,11 +1,11 @@
-// ST strings: create the 5 m blocks (st_blocks_geometry.txt from st_geom.py) on DESIGN\CREATING PLILLAR/STOPES\5M BLOCKS\STOPES (ore drives, accesses and intersections together, Kennet 2026-10-13) and ...\5M BLOCKS\EXTRA STRINGS and the extra strings on DESIGN\CREATING PLILLAR/STOPES\EXTRA STRINGS
+// ST strings: create the 5 m blocks (st_blocks_geometry.txt from st_geom.py) on DESIGN\CREATING PLILLAR/STOPES\5M BLOCKS\STOPES (ore drives, accesses and intersections together, Kennet 2026-10-13) and ...\5M BLOCKS\EXTRA STRINGS and the extra string lines on ...\5M BLOCKS\EXTRA STRINGS\EXTRA STRINGS
 // Body of: object Run(Deswik.Graphics.Application App, Deswik.Scheduler.Engine.Schedule Schedule, StringBuilder Out)
 
 var inv=System.Globalization.CultureInfo.InvariantCulture;
 string dir=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),"Kennet.DeswikClaude","work","stopes_mine");
 string BASE="DESIGN\\CREATING PLILLAR/STOPES\\5M BLOCKS";
 var LAYS=new Dictionary<string,string>{{"ST ORE DRIVE",BASE+"\\STOPES"},{"ST ACCESS",BASE+"\\STOPES"},{"EXTRA STRING",BASE+"\\EXTRA STRINGS"},{"INTERSECTION",BASE+"\\STOPES"}};
-string LINES="DESIGN\\CREATING PLILLAR/STOPES\\EXTRA STRINGS";
+string LINES=BASE+"\\EXTRA STRINGS\\EXTRA STRINGS";   // Kennet moved the extra string lines under the extra string blocks
 Func<string,Deswik.Graphics.Primaries.Layer> getL=(nm)=>{ Deswik.Graphics.Primaries.Layer r=null; foreach (Deswik.Graphics.Primaries.Layer l in App.Layers) if(l.Name==nm&&!l.Deleted) r=l; if(r==null){ App.Layers.Add(nm,false,1); foreach (Deswik.Graphics.Primaries.Layer l in App.Layers) if(l.Name==nm&&!l.Deleted) r=l; } return r; };
 var lays=new Dictionary<string,Deswik.Graphics.Primaries.Layer>(); foreach (var kv in LAYS) lays[kv.Key]=getL(kv.Value); var ll=getL(LINES);
 foreach (var ly in lays.Values.Distinct().Concat(new[]{ll})) { int c=0; foreach (var e in ly.Entities){ var f=e as Deswik.Graphics.Primaries.Figure; if(f!=null&&!f.Deleted) c++; } if(c>0){ Out.AppendLine(ly.Name+" already has "+c+" figures, stopping"); return null; } }
