@@ -33,8 +33,9 @@ namespace Kennet.DeswikClaude
             Dock = DockStyle.Fill;
             Font = new Font("Segoe UI", 9f);
 
-            // ---- top bar
-            var top = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 34, Padding = new Padding(2), WrapContents = false, AutoScroll = true };
+            // ---- top bar: wraps onto more rows when the panel is narrow (a fixed-height strip with a
+            // scrollbar squashed it to nothing), and can be hidden with the Options toggle.
+            var top = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Padding = new Padding(2), WrapContents = true };
             _model = new ComboBox { DropDownStyle = ComboBoxStyle.DropDown, Width = 150 };
             _model.Items.AddRange(PluginSettings.Models);
             _model.Text = _settings.Model;
@@ -54,6 +55,18 @@ namespace Kennet.DeswikClaude
             var autoChange = new CheckBox { Text = "Auto-approve changes", AutoSize = true, Checked = _settings.AutoApproveChanges, Padding = new Padding(4, 4, 0, 0) };
             autoChange.CheckedChanged += (s, e) => { _settings.AutoApproveChanges = autoChange.Checked; SafeSave(); };
             top.Controls.AddRange(new Control[] { _model, key, newChat, _undo, scripts, guides, autoRead, autoChange });
+            top.Visible = !_settings.ToolbarCollapsed;
+
+            var toggle = new LinkLabel { Dock = DockStyle.Top, Height = 20, Padding = new Padding(4, 3, 0, 0), LinkBehavior = LinkBehavior.HoverUnderline };
+            Action setToggleText = () => toggle.Text = top.Visible ? "▴ Hide options" : "▾ Options";
+            setToggleText();
+            toggle.LinkClicked += (s, e) =>
+            {
+                top.Visible = !top.Visible;
+                _settings.ToolbarCollapsed = !top.Visible;
+                SafeSave();
+                setToggleText();
+            };
 
             // ---- transcript
             _log = new RichTextBox
@@ -84,6 +97,7 @@ namespace Kennet.DeswikClaude
 
             Controls.Add(_log);
             Controls.Add(top);
+            Controls.Add(toggle);
             Controls.Add(_status);
             Controls.Add(bottom);
 
@@ -158,6 +172,7 @@ namespace Kennet.DeswikClaude
             if (IsBusy) return;
             _agent.Reset();
             _log.Clear();
+            _lastNote = null;
             AppendNote("New chat started.");
         }
 
@@ -198,6 +213,7 @@ namespace Kennet.DeswikClaude
         // ---- transcript helpers
         private void Append(string who, string text, Color body, Color label)
         {
+            _lastNote = null;
             _log.SelectionStart = _log.TextLength;
             _log.SelectionFont = new Font(Font, FontStyle.Bold);
             _log.SelectionColor = label;
@@ -208,8 +224,26 @@ namespace Kennet.DeswikClaude
             _log.ScrollToCaret();
         }
 
+        // Identical notes in a row (e.g. one "[Claude app] run_csharp" per tool call) are shown once with a count.
+        private string _lastNote;
+        private int _lastNoteStart = -1, _lastNoteCount;
+
         private void AppendNote(string text, Color? color = null)
         {
+            if (text == _lastNote && _lastNoteStart >= 0 && _lastNoteStart <= _log.TextLength)
+            {
+                _lastNoteCount++;
+                _log.Select(_lastNoteStart, _log.TextLength - _lastNoteStart);
+                _log.SelectionFont = new Font(Font.FontFamily, 8.5f, FontStyle.Italic);
+                _log.SelectionColor = color ?? Color.Gray;
+                _log.SelectedText = text + "  (×" + _lastNoteCount + ")\n\n";
+                _log.SelectionFont = Font;
+                _log.ScrollToCaret();
+                return;
+            }
+            _lastNote = text;
+            _lastNoteCount = 1;
+            _lastNoteStart = _log.TextLength;
             _log.SelectionStart = _log.TextLength;
             _log.SelectionFont = new Font(Font.FontFamily, 8.5f, FontStyle.Italic);
             _log.SelectionColor = color ?? Color.Gray;

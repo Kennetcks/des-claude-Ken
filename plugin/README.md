@@ -1,4 +1,4 @@
-# Claude Assistant for Deswik CAD 2024.2 (v0.3)
+# Claude Assistant for Deswik CAD 2024.2 (v0.3.1)
 
 Lets Claude work on your open Deswik drawing and Interactive Scheduler (IS) schedule. There are two ways to chat:
 
