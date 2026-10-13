@@ -17,7 +17,7 @@ foreach (var ly in lays.Values.Concat(new[]{ll})) {
   foreach (var fn in sF) if(!have.Contains(fn)) addM.Invoke(at,new object[]{fn,Enum.Parse(aType,"String"),""});
   foreach (var fn in dF) if(!have.Contains(fn)) addM.Invoke(at,new object[]{fn,Enum.Parse(aType,"Double"),0.0});
 }
-string DESIGN="5 m block on Kennet's ST strings (DESIGN\\CREATING PLILLAR/STOPES\\ST), 2026-10-13, v8 rules: no block overlaps another, close lodes together when the span is > 2.6 g/t else the better lode, full height floor to floor (or 22 m), walls on >=2.5 g/t, drillable (convex, >=50 deg, <=1 m change per 5 m), split by height for a piece > 2.6 then > 2.0, ore drive blocks kept with any grade, accesses only > 1.5 g/t, 15 m off the ramp";
+string DESIGN="5 m block on Kennet's ST strings (DESIGN\\CREATING PLILLAR/STOPES\\ST), 2026-10-13, v8 rules: no block overlaps another, close lodes together when the span is > 2.6 g/t else the better lode, full height floor to floor (or 22 m), walls on >=2.5 g/t, drillable (convex, >=50 deg, <=1 m change per 5 m), split by height for a piece > 2.6 then > 2.0, ore drive blocks kept with any grade except blocks below 0.5 g/t that cannot be split into a piece above 2.0 and a lower piece (Kennet 2026-10-13), accesses only > 1.5 g/t, 15 m off the ramp";
 int nb=0, bad=0; var inval=new List<string>(); var cnt=new Dictionary<string,int>();
 foreach (var line in File.ReadAllLines(Path.Combine(dir,"st_blocks_geometry.txt"))) {
   if (line.Trim()=="") continue; var parts=line.Split('|');
