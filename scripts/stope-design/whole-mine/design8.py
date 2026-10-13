@@ -125,7 +125,7 @@ def run(job):
                 gr=(cm[b]-cm[a])/t; o=co[b]-co[a]
                 if gr>SPAN_G and (best is None or o>best[0]+1e-9 or (abs(o-best[0])<=1e-9 and gr>best[1])): best=(o,gr,a,b)
         return None if best is None else (best[2],best[3])
-    best_g=0
+    best_g=0; WEAK=np.zeros(FW.shape,bool)
     for a,s0 in enumerate(S1):
         sm=np.abs(Sg-s0)<=2.5; H=np.median(Htop[sm])
         for l,f in enumerate(LF):
@@ -136,6 +136,7 @@ def run(job):
             span=lode_span(T[sm][:,:,band].sum(axis=(0,2)),MET[sm][:,:,band].sum(axis=(0,2)))
             if span is not None: i,j=span
             elif val[i,j]<=0:
+                WEAK[a,l]=True
                 mp=MET[sm][:,:,band].sum(axis=(0,2))
                 if l==0: mp=np.where(inside,mp,-1e9)
                 cm=np.r_[0,np.cumsum(mp)]; w=cm[nmin:]-cm[:-nmin]-1e-6*np.abs(UG[:len(cm)-nmin]+DU*nmin/2); i=int(np.argmax(w)); j=i+nmin
@@ -143,6 +144,14 @@ def run(job):
     def smooth(A,k=5):
         B=np.array([np.convolve(np.pad(A[:,l],k//2,mode='edge'),np.ones(k)/k,'valid') for l in range(A.shape[1])]).T
         C=B.copy(); C[:,1:-1]=(B[:,:-2]+2*B[:,1:-1]+B[:,2:])/4; return C
+    # v9 (Kennet 2026-10-13, 3CA0D1B B46): a station with no ore window, or whose window jumps > 3 m off its
+    # neighbours (another lode, a drive end), no longer drags the walls along strike: it takes the walls
+    # interpolated from the good stations at that level.
+    for l in range(NL):
+        c=(FW[:,l]+HWl[:,l])/2; med=np.array([np.median(c[max(0,a-5):a+6]) for a in range(len(c))])
+        bad=WEAK[:,l]|(np.abs(c-med)>3.0)
+        if bad.any() and (~bad).sum()>=2:
+            for A in (FW,HWl): A[bad,l]=np.interp(S1[bad],S1[~bad],A[~bad,l])
     FW=smooth(FW); HWl=smooth(HWl)
     # sections every SEC m
     ss=list(np.arange(0,drv.len,SEC))

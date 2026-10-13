@@ -87,6 +87,16 @@ def best_tops(gr,cols,i,j,dL,dR,cut):
     o=best[1]
     return [Hs[c] if opts[o[c]] is None else opts[o[c]] for c in range(n)]
 
+def flat_top(cols,i,j,tops):
+    # Kennet 2026-10-13 (v3): the highest part of the stope must be at least 3 m flat, not a short end column or a
+    # chamfer point: while the columns at the max top are narrower than FULLW, bring them down to the next top
+    tops=list(tops)
+    while True:
+        H=max(tops); w=sum(cols[i+k]['s1']-cols[i+k]['s0'] for k in range(len(tops)) if tops[k]>=H-0.01)
+        lower=[t for t in tops if t<H-0.01]
+        if w>=FULLW-1e-6 or not lower: return tops
+        h2=max(lower); tops=[min(t,h2) for t in tops]
+
 def fullok(cols,i,j,tops,dL,dR):
     # Kennet: at least 3 m along the floor that goes straight from floor to the back (full stope height)
     a=cols[i]['s0']+dL; b=cols[j]['s1']-dR; H=max(tops); w=0.0
@@ -98,7 +108,7 @@ def best_shape(gr,cols,i,j,cut):
     length=cols[j]['s1']-cols[i]['s0']
     dL=dR=0.0
     for it in range(2):
-        tops=best_tops(gr,cols,i,j,dL,dR,cut)
+        tops=flat_top(cols,i,j,best_tops(gr,cols,i,j,dL,dR,cut))
         for side in (1,2):
             zt=tops[0] if side==1 else tops[-1]; dmax=TANA*(zt-ZV) if zt>=12.5 else 0.0
             bv=None
@@ -107,6 +117,7 @@ def best_shape(gr,cols,i,j,cut):
                 if a+b>length-DS or not fullok(cols,i,j,tops,a,b): continue
                 t,g,v=evalm(gr,mask(gr,cols,i,j,tops,a,b),cut)
                 if bv is None or v>bv[0]+1e-9: bv=(v,float(d))
+            if bv is None: continue
             if side==1: dL=bv[1]
             else: dR=bv[1]
     t,g,v=evalm(gr,mask(gr,cols,i,j,tops,dL,dR),cut)
