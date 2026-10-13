@@ -64,3 +64,17 @@ Kennet: "under Design, there a layer called decline. i need you to extend the de
 - **Stockpiles and sumps.** Each access gets one ISP: 15 m long, +1:50, clear of drives, the decline and the raises. DSPs are 22 m long on the outside of the loop, about every 150 m of decline. SMPs are 10 m long at −1:7 on the inside, about every 30 m vertical, plus one at the bottom. All stay away from take-offs.
 - **Output.** `draw-decline-level-strings.cs` draws the strings on `DESIGN\DECLINE\{DECLINE EXTENSION, ACCESS, ORE DRIVES, RAR, ESCAPEWAY, STOCKPILES, SUMPS}`, with ACT_TYPE, LEVEL, LODE and DESIGN on each. `collide.py` lists strings passing through other groups' stopes, and `plot.py` draws the plan and long section.
 - **First result.** 2,344 m of decline, 18 loops, down to RL 6048, at least 24.8 m from the stopes. The axis steps from (8219, 63377) to (8075, 63320) as the main lode moves west. There are 60 level groups with 60 accesses plus 54 crosscuts, 114 ore drives, 60 RADs and 60 EWDs, 59 ISPs, 15 DSPs and 10 SMPs. The RAR and EWR are each 409 m at 66°. Open items to fix by hand: about 20 accesses still clip another group's stope near their ore drive, two bottom EWDs (L78 and L101) cross stopes, and L56 has no stockpile. Several small groups (under [tonnes removed]) need accesses longer than 200 m and should be dropped.
+
+## Decline V2: centre an existing design on the stopes (Kennet, 2026-10-13)
+
+Kennet's own level design (DESIGN\DECLINE, 120 strings, "IS design trial 261011") had ore drives from the original ST strings.
+He asked to centre them on the stopes, extend where needed, add access where a stope has no drive, fix attributes, solids by rule and colours.
+Scripts and method: `scripts/decline-design/decline-v2/README.md`.
+
+- **Copy first.** He asked for DESIGN\DECLINE V2 holding a full copy before any edit, "so we can go back". Never edit his layer.
+- **Use the live stope layer.** He deletes stopes in Deswik (12 from STOPE FINAL V3) and flags others GROUP = NO ("do not worry with them"). Read the stope names and GROUP from the drawing every time, not from a saved copy.
+- **Reuse his strings.** Move and extend his ore drives; where a new connector leaves from the end of one of his ore drives, extend that drive. Use new crosscuts off his same-level access or ore drive before a new level off the decline.
+- **Decline clearance.** His accesses leave the stacked loops at the loop level and cross the other passes about 20 m above or below. A new level between loops (for example RL 6314 between L304 and L325) has to leave outward and route around the loop footprint.
+- **His attribute conventions.** COST_CENTRE O for OD and C for everything else. LEVEL is a string field (RL - 6000). LODE is "GROUP A"/"GROUP B", "-" for the decline. MINE W, SCHEDULED 1, RECOVERY 1. Transformation Details "MGA94 Z51 // DMG26".
+- **Clean strings before tunnels-by-rule.** "Hard change of angle" errors come from duplicate vertices and from strings that double back. His 3CA4C81 and 3CA4C8B had these.
+- **Result.** 146 strings and 146 solids. 115 of 119 stopes have a drive within 2 m of their floor centre. 13 new accesses: 12 crosscuts of 15–72 m, plus 1 new level at RL 6065 (88 m with an ISP).
