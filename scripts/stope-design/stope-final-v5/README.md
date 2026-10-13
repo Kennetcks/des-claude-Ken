@@ -37,3 +37,9 @@ Layer STOPE FINAL V5B: 157 stopes [figure removed] INT = [ounces removed]; [gold
 on both. 5 stopes <= 2.5 were deleted. `all.sh` runs the whole chain.
 The ore drive strings (STOPE FINAL V5B\ORE DRIVES, 77 strings, 5.1 km, no solids) are drawn centred under the stope floors
 at the lowest floor RL, >= 1 m past the end stopes. Kennet asked for strings only this time; the solids can come later.
+
+End spikes (Kennet 2026-10-13, 3CA5752 and 3CA5758): a drive-end block beyond the end of the string above took the blind
+height (26 m) while the rest of the stope stops at the floor above (~21.5 m), which left a spike at the top end.
+`fix_end_spikes.py <all stopes pkl> <out.txt>` trims those stopes flat at the neighbour's height. Two stopes were affected
+in V5B: ST260 3CA0CFD S06 is now [figure removed] and ST238 3CA0D01 S04 is [figure removed]. Both were replaced in Deswik and
+re-interrogated.
