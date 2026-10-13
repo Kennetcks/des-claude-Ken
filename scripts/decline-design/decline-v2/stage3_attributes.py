@@ -1,7 +1,7 @@
 """Stage 3: final string set for DESIGN\\DECLINE V2 with corrected attributes -> CSVs for the C# writer."""
 import pickle, numpy as np, pandas as pd, sys
 sys.path.insert(0,'/home/claude/kd'); from geomlib import proj
-D2=pickle.load(open('stage2b.pkl','rb')); S=D2['S']; new=D2['new']
+D2=pickle.load(open('stage4.pkl','rb')); S=D2['S']; new=D2['new']
 A=pd.read_csv('kd_attrs.csv').set_index('handle'); SS=pd.read_csv('kd_strings.csv')
 O={h:g.sort_values('vi')[['x','y','z']].values for h,g in SS.groupby('handle')}
 MAP=dict(pd.read_csv('/mnt/user-data/uploads/work/stopes_mine/kd_v2_map.csv').values)
@@ -42,7 +42,7 @@ for h,v in S.items():
     rows.append(dict(id=h,v2=MAP[h],action='replace' if ch else 'attrs',ACT_TYPE=t,LEVEL=lev,LODE=lode,COST_CENTRE='O' if t=='OD' else 'C',
                      LAT_VERT='VERT' if t in('RAR','EWR') else 'LAT',STO_DEV='DEV',DESIGN=des,TD='MGA94 Z51 // DMG26'))
     if ch: geo+= [(h,k,*p) for k,p in enumerate(v['P'])]
-for h in ['3CA4CFA']: rows.append(dict(id=h,v2=MAP[h],action='delete'))
+for h in ['3CA4CFA']+D2.get('removed',[]): rows.append(dict(id=h,v2=MAP[h],action='delete'))
 for n in new:
     i+=1; nid='N%03d'%i; t=n['t']; lode=n['lode'] if str(n['lode']) in('GROUP A','GROUP B') else lode_near(n['P'])
     rows.append(dict(id=nid,v2='',action='new',ACT_TYPE=t,LEVEL=str(int(n['lev'])),LODE=lode,COST_CENTRE='O' if t=='OD' else 'C',LAT_VERT='LAT',STO_DEV='DEV',
