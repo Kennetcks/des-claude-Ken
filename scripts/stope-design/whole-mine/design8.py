@@ -18,6 +18,7 @@ Rules: base 1 m below the drive back, top <= back + HMAX and never above the flo
 walls shaped on >= CUT blocks, sections drillable (convex, >= MIN_DIP, <= 1 m change between 5 m sections),
 top lowered in 2.5 m bands while the top band loses money (min height HMIN), keep a block only if its
 diluted grade > KEEP_G."""
+import sys, csv, json, collections, numpy as np
 import os, sys, csv, json, collections, numpy as np
 from raster import Model
 ORIGIN=np.array([7770.,62610.,5930.])
@@ -62,6 +63,12 @@ def inside_cols(V,F,gx,gy,z0,hs):
         if not hit.any(): continue
         zt=w1*a[2]+w2*b[2]+w3*c[2]; out[hit]^=((z0[hit,None]+hs[None,:])<zt[hit,None])
     return out
+def overhead_floor(drv, S, back, others):
+    """lowest floor of any other drive passing over the stope footprint (|u|<=7 m) above back+2"""
+    p,_,_=drv.frame(S); out=np.full(len(S),np.inf)
+    if len(others)==0: return out
+    d=np.hypot(p[:,None,0]-others[None,:,0],p[:,None,1]-others[None,:,1])
+    z=np.where((d<=7.0)&(others[None,:,2]>back[:,None]+2.0),others[None,:,2],np.inf)
 # Kennet 2026-10-13 (ST strings): a stope under another level goes up to that level's string RL, even past 22 m, so two
 # stacked stopes can later be combined into a double lift. HUP = tallest floor-to-floor stope, CEIL_R = plan radius to the
 # string above. Defaults keep the v8 whole-mine behaviour (7 m, max 22 m).
@@ -83,6 +90,10 @@ def run(job):
     if drv.len<5: return pid, None, 'short'
     ph=PH.get(act,5.0)
     Sg=np.arange(DS/2, drv.len, DS); p,nrm,fz=drv.frame(Sg); back=fz+ph; ZB=fz.copy()
+    ceil=overhead_floor(drv,Sg,back,others); Htop=np.minimum(HMAX, ceil-ZB)   # floor to floor, max 22 m
+    BT=(ceil-ZB)<=HMAX+0.5                                                      # breaks through into a drive above
+    if np.median(Htop)<HMIN: return pid, None, 'no room'
+    HG=np.arange(DH/2, HMAX, DH); NH=len(HG)
     ceil=overhead_floor(drv,Sg,back,others); gap=ceil-ZB; Htop=np.where(gap<=HUP, gap, HBLIND)   # floor to floor (up to HUP), else blind height (22 m default)
     BT=gap<=HUP+0.5                                                             # breaks through into a drive above
     if np.median(Htop)<HMIN: return pid, None, 'no room'
@@ -126,6 +137,9 @@ def run(job):
                 t=ct[b]-ct[a]
                 if t<=0: continue
                 gr=(cm[b]-cm[a])/t; o=co[b]-co[a]
+                if gr>SPAN_G and (best is None or o>best[0]+1e-9 or (abs(o-best[0])<=1e-9 and gr>best[1])): best=(o,gr,a,b)
+        return None if best is None else (best[2],best[3])
+    best_g=0
                 if SPAN_PICK=='value': o=(cm[b]-cm[a])-CUT*t   # v10 (Kennet 2026-10-13, 3CA5476): metal above cut-off, not ore tonnes
                 if gr>SPAN_G and (best is None or o>best[0]+1e-9 or (abs(o-best[0])<=1e-9 and gr>best[1])): best=(o,gr,a,b)
         return None if best is None else (best[2],best[3])
@@ -157,6 +171,9 @@ def run(job):
             prof=V[sm][:,:,band].sum(axis=(0,2))
             if l==0: prof=np.where(inside,prof,-1e9)
             cs=np.r_[0,np.cumsum(prof)]; val=np.where(valid,cs[jj]-cs[ii],-np.inf); k=np.argmax(val); i,j=np.unravel_index(k,val.shape)
+            span=lode_span(T[sm][:,:,band].sum(axis=(0,2)),MET[sm][:,:,band].sum(axis=(0,2)))
+            if span is not None: i,j=span
+            elif val[i,j]<=0:
             if SPAN_PICK=='track':
                 CANDS[a][l]=lode_cands(T[sm][:,:,band].sum(axis=(0,2)),MET[sm][:,:,band].sum(axis=(0,2)))
                 if l==0: CANDS[a][l]=[c for c in CANDS[a][l] if inside[c[0]:c[1]].all()]
@@ -168,6 +185,9 @@ def run(job):
                 if l==0: mp=np.where(inside,mp,-1e9)
                 cm=np.r_[0,np.cumsum(mp)]; w=cm[nmin:]-cm[:-nmin]-1e-6*np.abs(UG[:len(cm)-nmin]+DU*nmin/2); i=int(np.argmax(w)); j=i+nmin
             FW[a,l]=UG[i]-DU/2; HWl[a,l]=UG[j-1]+DU/2
+    def smooth(A,k=5):
+        B=np.array([np.convolve(np.pad(A[:,l],k//2,mode='edge'),np.ones(k)/k,'valid') for l in range(A.shape[1])]).T
+        C=B.copy(); C[:,1:-1]=(B[:,:-2]+2*B[:,1:-1]+B[:,2:])/4; return C
     if SPAN_PICK=='shape':
         # v10c (Kennet 2026-10-13, 3CA5476 "you chose two lodes, and there is one higher grade"): pick ONE stope shape per station
         # for all levels at once - a width W (2.2-14 m) and a centre that may lean up to 1.2 m per level (dip) - maximising the
