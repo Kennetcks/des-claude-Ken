@@ -9,7 +9,7 @@ const net = require('net');
 const fs = require('fs');
 const path = require('path');
 
-const VERSION = '0.3.0';
+const VERSION = '0.4.0';
 const PIPE = process.env.DESWIK_PIPE || '\\\\.\\pipe\\KennetDeswikClaude';
 const FALLBACK_TOOLS = JSON.parse(fs.readFileSync(path.join(__dirname, 'tools.json'), 'utf8'));
 

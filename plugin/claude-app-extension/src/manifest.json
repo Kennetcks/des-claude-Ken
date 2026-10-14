@@ -2,9 +2,9 @@
   "manifest_version": "0.3",
   "name": "deswik-claude",
   "display_name": "Deswik CAD (Claude Assistant)",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Lets Claude read and edit your open Deswik CAD drawing and Interactive Scheduler schedule.",
-  "long_description": "Connects the Claude desktop app to the **Kennet.DeswikClaude** plugin running inside Deswik CAD 2024.2 on this computer, over a local named pipe that only your Windows user can reach.\n\nClaude can read layers, the current selection, schedule fields and tasks. With your approval (shown as a pop-up inside Deswik), it can edit task fields, add dependencies, run levelling, run IS/CAD commands, and run C# scripts it writes.\n\nRequires Deswik CAD to be open with the plugin loaded.",
+  "long_description": "Connects the Claude desktop app to the **Kennet.DeswikClaude** plugin running inside Deswik CAD 2026.1 on this computer, over a local named pipe that only your Windows user can reach.\n\nClaude can read layers, the current selection, schedule fields and tasks. With your approval (shown as a pop-up inside Deswik), it can edit task fields, add dependencies, run levelling, run IS/CAD commands, and run C# scripts it writes.\n\nRequires Deswik CAD to be open with the plugin loaded.",
   "author": {
     "name": "Kennet"
   },

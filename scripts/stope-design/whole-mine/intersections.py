@@ -7,7 +7,7 @@ sys.path.insert(0,'/home/claude/work'); import design8 as design
 from overlap_check import overlap
 from raster import Model
 ORIGIN=design.ORIGIN; NL2=2*design.NL; GAP=(0.5,12.0)
-kept=pickle.load(open(sys.argv[1],'rb')); M=Model('n'); S=design.load_strings()
+kept=pickle.load(open(sys.argv[1],'rb')); import os; M=Model(os.environ.get('MODEL','n')); S=design.load_strings()
 acc_ends=np.array([p for v in S.values() if v['act']!='OD' and v['lv']=='LAT' for p in (v['pts'][0],v['pts'][-1])])+ORIGIN
 claimed={}
 for b in kept:
@@ -53,6 +53,7 @@ for L,i,j in sorted(cand):
     if hit>=0.5: why['overlaps another block']+=1; continue
     dacc=np.min(np.linalg.norm((acc_ends-c)*[1,1,0.3],axis=1)) if len(acc_ends) else 99
     t=float(w.sum()); gg=float((w*au).sum()/t) if t>0 else 0.0
+    if os.environ.get('MIN_G') and gg<float(os.environ['MIN_G']): why['below MIN_G']+=1; continue
     ref=a['parts'][0]
     nb=dict(pid=pid,act='INT',bi=0,part='',split='',target=0.0,ch0=0.0,ch1=round(L,1),zlo=0.0,top=None,height=float(V[:,2].max()-V[:,2].min()),bt=bool(ref['bt'] or b['parts'][0]['bt']),
             height_above_back=float(ref['height_above_back']),t=t,g=gg,ore_t=float(w[au>=design.CUT].sum()),mined=float((w*(mn>0)).sum()/t) if t>0 else 0.0,

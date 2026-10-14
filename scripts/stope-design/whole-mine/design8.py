@@ -19,6 +19,7 @@ walls shaped on >= CUT blocks, sections drillable (convex, >= MIN_DIP, <= 1 m ch
 top lowered in 2.5 m bands while the top band loses money (min height HMIN), keep a block only if its
 diluted grade > KEEP_G."""
 import sys, csv, json, collections, numpy as np
+import os, sys, csv, json, collections, numpy as np
 from raster import Model
 ORIGIN=np.array([7770.,62610.,5930.])
 CUT, MARG, ORE_SHARE, KEEP_G, SPLIT_G = 2.5, 2.5, 0.15, 1.5, 2.6
@@ -26,6 +27,9 @@ SPLIT_TARGETS = (2.6, 2.0)
 LOW_G = 2.0   # v5: blocks >= 2.6 are also split when a top or bottom section (>= 5 m) is below this   # v3: split for a piece > 2.6 first, else for a piece > 2.0
 KEEP_ALL = {'OD'}   # other drive types keep only blocks > KEEP_G (no stopes along waste accesses)
 MAX_W, SPAN_G = 20.0, 2.6
+SHAPE_DRIFT = float(os.environ.get('SHAPE_DRIFT','0.5'))   # v10c: max centre drift per m along strike
+SHAPE_REF = float(os.environ.get('SHAPE_REF','2.5'))   # v10c: grade the column shape pays against (metal above it)
+SPAN_PICK = os.environ.get('SPAN_PICK','ore')   # 'ore' = v8/v9 (most ore tonnes), 'value' = v10 (most metal above cut-off), 'track' = v10b (one lode track per drive), 'shape' = v10c (one column shape per station)
 MIN_W, HMAX, HMIN, BASE_IN, SEC, NL, MAX_STEP, MIN_DIP = 2.2, 22.0, 7.5, 0.0, 5.0, 5, 1.0, 50.0   # v6: 5 wall points, 50 deg (standard minimum footwall)
 DS, DU, DH = 0.5, 0.25, 0.5
 UG = np.arange(-17+DU/2, 17, DU); NU=len(UG); nmin=int(np.ceil(MIN_W/DU))   # v6: +-17 m (edge of the exported corridor)
@@ -65,6 +69,18 @@ def overhead_floor(drv, S, back, others):
     if len(others)==0: return out
     d=np.hypot(p[:,None,0]-others[None,:,0],p[:,None,1]-others[None,:,1])
     z=np.where((d<=7.0)&(others[None,:,2]>back[:,None]+2.0),others[None,:,2],np.inf)
+# Kennet 2026-10-13 (ST strings): a stope under another level goes up to that level's string RL, even past 22 m, so two
+# stacked stopes can later be combined into a double lift. HUP = tallest floor-to-floor stope, CEIL_R = plan radius to the
+# string above. Defaults keep the v8 whole-mine behaviour (7 m, max 22 m).
+CEIL_R=float(os.environ.get('CEIL_R','7')); HUP=float(os.environ.get('HUP',str(HMAX)))
+# HBLIND = height of a blind stope (no string above): Kennet 2026-10-13 uses 26 m, ~22 m once the development drive is taken out
+HBLIND=float(os.environ.get('HBLIND',str(HMAX)))
+def overhead_floor(drv, S, back, others):
+    """lowest floor of any other drive passing over the stope footprint (|u|<=CEIL_R, 7 m by default) above back+2"""
+    p,_,_=drv.frame(S); out=np.full(len(S),np.inf)
+    if len(others)==0: return out
+    d=np.hypot(p[:,None,0]-others[None,:,0],p[:,None,1]-others[None,:,1])
+    z=np.where((d<=CEIL_R)&(others[None,:,2]>back[:,None]+2.0),others[None,:,2],np.inf)
     return z.min(axis=1)
 def run(job):
     global M
@@ -78,6 +94,10 @@ def run(job):
     BT=(ceil-ZB)<=HMAX+0.5                                                      # breaks through into a drive above
     if np.median(Htop)<HMIN: return pid, None, 'no room'
     HG=np.arange(DH/2, HMAX, DH); NH=len(HG)
+    ceil=overhead_floor(drv,Sg,back,others); gap=ceil-ZB; Htop=np.where(gap<=HUP, gap, HBLIND)   # floor to floor (up to HUP), else blind height (22 m default)
+    BT=gap<=HUP+0.5                                                             # breaks through into a drive above
+    if np.median(Htop)<HMIN: return pid, None, 'no room'
+    HG=np.arange(DH/2, max(HMAX,HUP,HBLIND), DH); NH=len(HG)
     X=p[:,None,None,0]+UG[None,:,None]*nrm[:,None,None,0]; Y=p[:,None,None,1]+UG[None,:,None]*nrm[:,None,None,1]; Z=ZB[:,None,None]+HG[None,None,:]
     X,Y,Z=np.broadcast_arrays(X,Y,Z)
     td,au,mn=M.look(X.ravel(),Y.ravel(),Z.ravel()); sh=(len(Sg),NU,NH)
@@ -120,6 +140,30 @@ def run(job):
                 if gr>SPAN_G and (best is None or o>best[0]+1e-9 or (abs(o-best[0])<=1e-9 and gr>best[1])): best=(o,gr,a,b)
         return None if best is None else (best[2],best[3])
     best_g=0
+                if SPAN_PICK=='value': o=(cm[b]-cm[a])-CUT*t   # v10 (Kennet 2026-10-13, 3CA5476): metal above cut-off, not ore tonnes
+                if gr>SPAN_G and (best is None or o>best[0]+1e-9 or (abs(o-best[0])<=1e-9 and gr>best[1])): best=(o,gr,a,b)
+        return None if best is None else (best[2],best[3])
+    def lode_cands(tb,mb):
+        """v10: every span from one lode to another (<= MAX_W, >= MIN_W) diluting above SPAN_G: (a, b, metal above cut-off, grade)"""
+        g=np.where(tb>0,mb/np.maximum(tb,1e-12),0); ore=(g>=CUT)&(tb>0)
+        idx=np.nonzero(ore)[0]; runs=[]
+        for k in idx:
+            if runs and k-runs[-1][1]<=2: runs[-1][1]=k+1
+            else: runs.append([k,k+1])
+        ct=np.r_[0,np.cumsum(tb)]; cm=np.r_[0,np.cumsum(mb)]; out=[]
+        for x in range(len(runs)):
+            for y in range(x,len(runs)):
+                a,b=runs[x][0],runs[y][1]
+                if (b-a)*DU>MAX_W: break
+                if b-a<nmin:
+                    c=(a+b)//2; a=max(0,min(NU-nmin,c-nmin//2)); b=a+nmin
+                t=ct[b]-ct[a]
+                if t<=0: continue
+                gr=(cm[b]-cm[a])/t
+                if gr>SPAN_G: out.append((a,b,(cm[b]-cm[a])-CUT*t,gr))
+        return out
+    best_g=0; WEAK=np.zeros(FW.shape,bool)
+    CANDS=[[None]*NL for _ in S1]; FALL=[[None]*NL for _ in S1]
     for a,s0 in enumerate(S1):
         sm=np.abs(Sg-s0)<=2.5; H=np.median(Htop[sm])
         for l,f in enumerate(LF):
@@ -130,6 +174,13 @@ def run(job):
             span=lode_span(T[sm][:,:,band].sum(axis=(0,2)),MET[sm][:,:,band].sum(axis=(0,2)))
             if span is not None: i,j=span
             elif val[i,j]<=0:
+            if SPAN_PICK=='track':
+                CANDS[a][l]=lode_cands(T[sm][:,:,band].sum(axis=(0,2)),MET[sm][:,:,band].sum(axis=(0,2)))
+                if l==0: CANDS[a][l]=[c for c in CANDS[a][l] if inside[c[0]:c[1]].all()]
+            span=lode_span(T[sm][:,:,band].sum(axis=(0,2)),MET[sm][:,:,band].sum(axis=(0,2)))
+            if span is not None: i,j=span
+            elif val[i,j]<=0:
+                WEAK[a,l]=True
                 mp=MET[sm][:,:,band].sum(axis=(0,2))
                 if l==0: mp=np.where(inside,mp,-1e9)
                 cm=np.r_[0,np.cumsum(mp)]; w=cm[nmin:]-cm[:-nmin]-1e-6*np.abs(UG[:len(cm)-nmin]+DU*nmin/2); i=int(np.argmax(w)); j=i+nmin
@@ -137,6 +188,104 @@ def run(job):
     def smooth(A,k=5):
         B=np.array([np.convolve(np.pad(A[:,l],k//2,mode='edge'),np.ones(k)/k,'valid') for l in range(A.shape[1])]).T
         C=B.copy(); C[:,1:-1]=(B[:,:-2]+2*B[:,1:-1]+B[:,2:])/4; return C
+    if SPAN_PICK=='shape':
+        # v10c (Kennet 2026-10-13, 3CA5476 "you chose two lodes, and there is one higher grade"): pick ONE stope shape per station
+        # for all levels at once - a width W (2.2-14 m) and a centre that may lean up to 1.2 m per level (dip) - maximising the
+        # metal above cut-off of the whole column, t*(g-2.5); along strike the centre drifts <= 0.75 m per m (Viterbi). A wide
+        # span that only pays in one band no longer drags the walls off the higher-grade lode below/above it.
+        from scipy.ndimage import maximum_filter1d
+        # v10d: the centre follows a straight dip line up the column (c0 + d*level, |d| up to the MIN_DIP limit, v10e) so the section stays
+        # one coherent lode, and the Viterbi state is (centre, width): the width may change one step per m along strike only.
+        WS=[MIN_W,3.0,4.0,5.5,7.5,10.0,14.0]; nA=len(S1); nU=len(UG); nW=len(WS)
+        DIPS=np.arange(-4.5,4.51,0.3)   # v10e (Kennet 2026-10-13, 3CA0D17): lean per level up to the 50 deg drillable limit, not 1.2 m
+        BEST=np.full((nA,nW,nU),-1e9); DARG=np.zeros((nA,nW,nU),int)
+        for a,s0 in enumerate(S1):
+            sm=np.abs(Sg-s0)<=2.5; H=np.median(Htop[sm])
+            for wi,Wd in enumerate(WS):
+                nw=max(1,int(round(Wd/DU))); VL=[]
+                for l,f in enumerate(LF):
+                    band=np.abs(HG-f*H)<=H/(NL-1)/2+0.1
+                    pv=(MET[sm][:,:,band]-SHAPE_REF*T[sm][:,:,band]).sum(axis=(0,2)); cs=np.r_[0,np.cumsum(pv)]
+                    st=np.arange(nU)-nw//2; ok=(st>=0)&(st+nw<=nU)
+                    v=np.full(nU,-1e9); v[ok]=cs[st[ok]+nw]-cs[st[ok]]; VL.append(v)
+                tot=np.zeros((len(DIPS),nU))
+                for di,d in enumerate(DIPS):
+                    for l in range(NL):
+                        sh=int(round(d*l/DU)); idx=np.arange(nU)+sh; ok=(idx>=0)&(idx<nU)
+                        tot[di]+=np.where(ok,VL[l][np.clip(idx,0,nU-1)],-1e9)
+                tot[np.abs(DIPS)>H/(NL-1)/np.tan(np.radians(MIN_DIP))+1e-6]=-1e12
+                DARG[a,wi]=tot.argmax(0); BEST[a,wi]=tot.max(0)
+        if BEST.max()>0:
+            # Viterbi on 5 m bins (the section spacing): centre moves <= MAX_STEP and width one step per bin, the same
+            # limits the drillable sections hold later, so the path is never smeared by strike_limit/smoothing
+            nb=int(np.ceil(nA/SEC)); bi=np.minimum((np.arange(nA)//int(SEC)),nb-1)
+            BB=np.zeros((nb,nW,nU)); np.add.at(BB,bi,BEST)
+            DUc=np.abs(UG[:,None]-UG[None,:])<=SHAPE_DRIFT*SEC+1e-6
+            acc=BB[0].copy(); bp=np.zeros((nb,nW,nU,2),int)
+            for a in range(1,nb):
+                nxt=np.full((nW,nU),-1e18)
+                for wi in range(nW):
+                    for wj in range(max(0,wi-1),min(nW,wi+2)):
+                        m=np.where(DUc,acc[wj][None,:],-1e18); k=m.argmax(1); val=m[np.arange(nU),k]
+                        bt=val>nxt[wi]; nxt[wi]=np.where(bt,val,nxt[wi]); bp[a,wi,bt,0]=wj; bp[a,wi,bt,1]=k[bt]
+                acc=nxt+BB[a]
+            wi,k=np.unravel_index(int(np.argmax(acc)),acc.shape); bw=np.zeros(nb,int); bu=np.zeros(nb,int)
+            for a in range(nb-1,-1,-1):
+                bw[a]=wi; bu[a]=k
+                if a>0: wi,k=bp[a,wi,k]
+            # dip per bin: best dip of the bin's (w,u) summed over its stations
+            bc=np.array([S1[bi==q].mean() for q in range(nb)])
+            for a in range(nA):
+                q=bi[a]; wi=bw[q]; k=bu[q]
+                c0=np.interp(S1[a],bc,UG[bu]); Wd=np.interp(S1[a],bc,[WS[w] for w in bw])
+                dd=[DIPS[DARG[x,bw[q],bu[q]]] for x in np.nonzero(bi==q)[0]]; d=float(np.median(dd))
+                for l in range(NL):
+                    c=c0+d*l; FW[a,l]=c-Wd/2; HWl[a,l]=c+Wd/2; WEAK[a,l]=BB[q,wi,k]<=0
+            pu=np.array([bu[bi[a]] for a in range(nA)]); pw=np.array([bw[bi[a]] for a in range(nA)])
+            if os.environ.get('DBG_SHAPE'):
+                for a in range(0,nA,3):
+                    ks=[np.argmin(np.abs(UG-x)) for x in np.arange(-8,8.1,1.0)]; print('   prof W2.2', ' '.join('%5.0f'%BEST[a,0,k] for k in ks))
+                for a in range(0,nA,3): print('st %.1f c0 %.1f W %.1f dip %.1f sc %.0f'%(S1[a],UG[pu[a]],WS[pw[a]],DIPS[DARG[a,pw[a],pu[a]]],BEST[a,pw[a],pu[a]]))
+    if SPAN_PICK=='track':
+        # v10b (Kennet 2026-10-13, 3CA5476): one lode track per drive. Viterbi over the 1 m stations: the track centre may drift
+        # <= 0.75 m per m along strike, each station scores the best span containing the centre at every level (metal above
+        # cut-off). Then every station/level takes the best span on the track, so the walls follow one lode (or both lodes where
+        # the span holding both is worth more) instead of jumping between lodes and being smoothed into the waste between them.
+        UC=UG[::2]; nA=len(S1); SC=np.zeros((nA,len(UC)))
+        for a in range(nA):
+            for l in range(NL):
+                cl=CANDS[a][l] or []
+                if not cl: continue
+                lo=np.array([UG[c[0]]-DU/2 for c in cl]); hi=np.array([UG[c[1]-1]+DU/2 for c in cl]); v=np.array([c[2] for c in cl])
+                ins=(UC[:,None]>=lo[None,:])&(UC[:,None]<=hi[None,:])
+                SC[a]+=np.where(ins,v[None,:],0).max(axis=1)
+        if SC.max()>0:
+            D=np.abs(UC[:,None]-UC[None,:]); PEN=np.where(D<=0.75,0,-1e3*(D-0.75))
+            acc=SC[0].copy(); bp=np.zeros((nA,len(UC)),int)
+            for a in range(1,nA):
+                m=acc[None,:]+PEN; bp[a]=np.argmax(m,axis=1); acc=m[np.arange(len(UC)),bp[a]]+SC[a]
+            k=int(np.argmax(acc)); trk=np.zeros(nA)
+            for a in range(nA-1,-1,-1): trk[a]=UC[k]; k=bp[a,k]
+            for a in range(nA):
+                for l in range(NL):
+                    cl=CANDS[a][l] or []
+                    on=[c for c in cl if UG[c[0]]-DU/2<=trk[a]<=UG[c[1]-1]+DU/2]
+                    if not on: on=[c for c in cl if abs((UG[c[0]]+UG[c[1]-1])/2-trk[a])<=2.0]
+                    if on:
+                        c=max(on,key=lambda c:c[2]); FW[a,l]=UG[c[0]]-DU/2; HWl[a,l]=UG[c[1]-1]+DU/2; WEAK[a,l]=False
+                    else:
+                        WEAK[a,l]=True; FW[a,l]=trk[a]-MIN_W/2; HWl[a,l]=trk[a]+MIN_W/2
+    def smooth(A,k=5):
+        B=np.array([np.convolve(np.pad(A[:,l],k//2,mode='edge'),np.ones(k)/k,'valid') for l in range(A.shape[1])]).T
+        C=B.copy(); C[:,1:-1]=(B[:,:-2]+2*B[:,1:-1]+B[:,2:])/4; return C
+    # v9 (Kennet 2026-10-13, 3CA0D1B B46): a station with no ore window, or whose window jumps > 3 m off its
+    # neighbours (another lode, a drive end), no longer drags the walls along strike: it takes the walls
+    # interpolated from the good stations at that level.
+    for l in range(NL):
+        c=(FW[:,l]+HWl[:,l])/2; med=np.array([np.median(c[max(0,a-5):a+6]) for a in range(len(c))])
+        bad=WEAK[:,l]|(np.abs(c-med)>3.0)
+        if bad.any() and (~bad).sum()>=2:
+            for A in (FW,HWl): A[bad,l]=np.interp(S1[bad],S1[~bad],A[~bad,l])
     FW=smooth(FW); HWl=smooth(HWl)
     # sections every SEC m
     ss=list(np.arange(0,drv.len,SEC))
@@ -223,6 +372,7 @@ def run(job):
                         if section_ok(si) and all(np.all(np.abs(A[si]-A[x])<=MAX_STEP+1e-9) for x in (si-1,si+1) if 0<=x<len(ss)):
                             e1=ev(a,b); dt,dm,do=e1-e0
                             good=dt!=0 and (dm/dt>=MARG or do/dt>=ORE_SHARE)
+                            if SPAN_PICK=='shape': good=dt!=0 and dm/dt>=SHAPE_REF   # v10d: a nudge adds only slices that pay on their own grade
                             if (step>0 and dt>0 and good) or (step<0 and dt<0 and not good): changed+=1; break
                         A[si]=old
         if not changed: break
