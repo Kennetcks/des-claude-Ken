@@ -5,6 +5,7 @@ Shared knowledge for the **Claude Assistant for Deswik CAD** plugin (Kennet.Desw
 - `knowledge/` — guides Claude should read before working in Deswik: rules the engineer settled on, API details verified in Deswik 2024.2, and pitfalls.
 - `scripts/` — working `run_csharp` examples behind those guides.
 
+- `playbook/` — AI-assisted mine planning playbook: how the AI was used for monthly 3MS scheduling, design, physicals, deck, CERs and memos, with worked example scripts and lessons learned. See [playbook/README.md](playbook/README.md).
 - `plugin/` — source of the Deswik plugin (C#) and the Claude desktop app extension. See [plugin/README.md](plugin/README.md) to install and build.
 
 ## How the plugin uses it
