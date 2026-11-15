@@ -5,6 +5,8 @@
 - `.cs` files are **bodies for the plugin's `run_csharp` tool** (`object Run(App, Schedule, Out)`), sent with `deswik/dcall.ps1`.
 - `.ps1` files are **Windows PowerShell 5.1** scripts using Office COM. Save them as UTF-8 **with BOM** if they contain °, ², • characters.
 
+Scripts from the November 2026 session are in [nov-2026/](nov-2026/README.md).
+
 ## deswik/
 
 | Script | What it does | Changes data? |

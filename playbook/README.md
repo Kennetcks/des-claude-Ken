@@ -31,6 +31,7 @@ Work covered:
 4. Before you trust a number: [docs/08-checks-and-reviews.md](docs/08-checks-and-reviews.md).
 5. Read [docs/09-lessons-learned.md](docs/09-lessons-learned.md) – every mistake made and how to avoid it.
 6. Reusable scripts: [scripts/README.md](scripts/README.md). Example prompts: [docs/10-prompt-examples.md](docs/10-prompt-examples.md).
+7. November 2026 session (level design, replacing IS tunnel tasks, reports without Deswik, Ventsim, daily report automation): [docs/11-november-2026-session.md](docs/11-november-2026-session.md), scripts in [scripts/nov-2026/](scripts/nov-2026/README.md).
 
 ## Folder layout
 
@@ -42,6 +43,7 @@ scripts/
   excel/       PowerShell + Excel COM: physicals, tracking sheet, CERs
   powerpoint/  PowerShell + PowerPoint COM: 3MS deck updates
   word-onenote/ PowerShell + Word / OneNote COM: memos, design standard, handover
+  nov-2026/    scripts from the November 2026 session (deswik, excel, powerpoint, ventsim, tools)
 ```
 
 ## Important limits
